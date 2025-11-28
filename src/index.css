@@ -1,0 +1,142 @@
+@import url("https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap");
+@import "tailwindcss";
+
+:root {
+  /* OKLCH Color Palette - Adaptive Edge */
+  --ae-purple-50: oklch(0.97 0.02 290);
+  --ae-purple-100: oklch(0.93 0.04 290);
+  --ae-purple-200: oklch(0.85 0.08 290);
+  --ae-purple-300: oklch(0.75 0.12 290);
+  --ae-purple-400: oklch(0.65 0.16 290);
+  --ae-purple-500: oklch(0.55 0.20 290);
+  --ae-purple-600: oklch(0.45 0.20 290);
+  --ae-purple-700: oklch(0.35 0.18 290);
+  --ae-purple-800: oklch(0.28 0.14 290);
+  --ae-purple-900: oklch(0.20 0.10 290);
+  --ae-purple-950: oklch(0.14 0.08 290);
+
+  --ae-accent-cyan: oklch(0.75 0.15 195);
+  --ae-accent-magenta: oklch(0.65 0.25 330);
+  --ae-accent-gold: oklch(0.80 0.15 85);
+
+  /* Semantic colors */
+  --background: var(--ae-purple-950);
+  --foreground: oklch(0.95 0.02 290);
+  --card: var(--ae-purple-900);
+  --card-foreground: oklch(0.95 0.02 290);
+  --primary: var(--ae-accent-cyan);
+  --primary-foreground: var(--ae-purple-950);
+  --secondary: var(--ae-purple-800);
+  --secondary-foreground: oklch(0.95 0.02 290);
+  --muted: var(--ae-purple-800);
+  --muted-foreground: oklch(0.70 0.05 290);
+  --accent: var(--ae-accent-magenta);
+  --accent-foreground: oklch(0.95 0.02 290);
+  --border: var(--ae-purple-700);
+  --ring: var(--ae-accent-cyan);
+
+  /* Trust meter colors */
+  --trust-low: oklch(0.65 0.20 25);
+  --trust-medium: oklch(0.75 0.15 85);
+  --trust-high: oklch(0.70 0.18 145);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Outfit", system-ui, sans-serif;
+  background: linear-gradient(135deg, var(--ae-purple-950) 0%, var(--ae-purple-900) 50%, oklch(0.18 0.12 310) 100%);
+  color: var(--foreground);
+  min-height: 100vh;
+  line-height: 1.6;
+}
+
+h1, h2, h3, h4 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 600;
+}
+
+code, pre {
+  font-family: "JetBrains Mono", monospace;
+}
+
+/* Glass effect for cards */
+.glass {
+  background: linear-gradient(
+    135deg,
+    oklch(0.25 0.08 290 / 0.6) 0%,
+    oklch(0.20 0.06 290 / 0.4) 100%
+  );
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(0.40 0.10 290 / 0.3);
+  box-shadow: 
+    0 8px 32px oklch(0 0 0 / 0.3),
+    inset 0 1px 0 oklch(1 0 0 / 0.05);
+}
+
+/* Button styles */
+.btn {
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.btn-primary:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: var(--ae-purple-700);
+}
+
+/* Trust meter */
+.trust-meter {
+  height: 12px;
+  background: var(--ae-purple-800);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.trust-fill {
+  height: 100%;
+  transition: width 0.5s ease, background 0.5s ease;
+  border-radius: 6px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease forwards;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
