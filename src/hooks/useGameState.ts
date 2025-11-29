@@ -19,6 +19,7 @@ export interface GameState {
   maxActions: number;
   playedInitiatives: number[];
   currentChallenge: Challenge | null;
+  pendingDecision: Challenge | null; // For forcing decisions
   eventLog: string[];
   gameOver: boolean;
   feedbackHistory: Array<{
@@ -30,23 +31,24 @@ export interface GameState {
 }
 
 const initialDimensions: TrustDimensions = {
-  credibility: 40,
-  reliability: 40,
-  intimacy: 40,
-  selfOrientation: 30, // Lower is better - starts moderate
+  credibility: 35,  // Start lower - you have to earn it
+  reliability: 35,
+  intimacy: 35,
+  selfOrientation: 35, // Start moderate - pressure builds
 };
 
 const initialState: GameState = {
-  resources: 10,
-  profit: 100,
+  resources: 6,  // Tighter resources - can't do everything
+  profit: 80,    // Start with some pressure
   customers: 1000,
   dimensions: { ...initialDimensions },
   round: 1,
-  maxRounds: 8,
-  actionsLeft: 3,
-  maxActions: 3,
+  maxRounds: 10,  // Longer game for more compounding
+  actionsLeft: 2, // Only 2 actions per round - forces choices
+  maxActions: 2,
   playedInitiatives: [],
   currentChallenge: null,
+  pendingDecision: null,
   eventLog: [],
   gameOver: false,
   feedbackHistory: [],
@@ -55,18 +57,16 @@ const initialState: GameState = {
 // Calculate trust using the Trust Equation
 export const calculateTrust = (dims: TrustDimensions): number => {
   const numerator = dims.credibility + dims.reliability + dims.intimacy;
-  const denominator = Math.max(dims.selfOrientation, 10); // Minimum 10 to avoid division issues
-  const trust = (numerator / denominator) * 10; // Scale to reasonable range
+  const denominator = Math.max(dims.selfOrientation, 10);
+  const trust = (numerator / denominator) * 10;
   return Math.min(100, Math.max(0, Math.round(trust)));
 };
 
-// Diminishing returns: each point in a dimension is harder to get
+// Diminishing returns on positive changes
 const applyDiminishingReturns = (currentValue: number, change: number): number => {
-  if (change <= 0) return currentValue + change; // No diminishing for decreases
-  
-  // The higher the current value, the less impact new investments have
-  const diminishingFactor = 1 - (currentValue / 150); // Approaches 0 as value approaches 150
-  const adjustedChange = change * Math.max(0.3, diminishingFactor);
+  if (change <= 0) return currentValue + change;
+  const diminishingFactor = 1 - (currentValue / 120);
+  const adjustedChange = change * Math.max(0.25, diminishingFactor);
   return currentValue + adjustedChange;
 };
 
@@ -74,9 +74,10 @@ export const useGameState = (preset: IndustryPreset) => {
   const [state, setState] = useState<GameState>({
     ...initialState,
     eventLog: [
-      "Welcome to Trust Builder!",
-      "Trust = (Credibility + Reliability + Intimacy) / Self-Orientation",
+      "=== " + preset.name + " ===",
       preset.welcomeMessage,
+      "Trust = (C + R + I) / S. Start: 35/35/35, S: 35",
+      "You have 2 actions per round. Choose wisely.",
     ],
   });
 
@@ -88,20 +89,19 @@ export const useGameState = (preset: IndustryPreset) => {
       let sentiment: "positive" | "neutral" | "negative";
       let messages: string[];
 
-      // For self-orientation, lower is better
       if (dimension === "selfOrientation") {
         if (value <= 25) {
           sentiment = "positive";
-          messages = feedbackSet.low; // Low self-orientation = good
+          messages = feedbackSet.low;
         } else if (value <= 45) {
           sentiment = "neutral";
           messages = feedbackSet.medium;
         } else {
           sentiment = "negative";
-          messages = feedbackSet.high; // High self-orientation = bad
+          messages = feedbackSet.high;
         }
       } else {
-        if (value >= 60) {
+        if (value >= 55) {
           sentiment = "positive";
           messages = feedbackSet.high;
         } else if (value >= 35) {
@@ -141,11 +141,11 @@ export const useGameState = (preset: IndustryPreset) => {
         if (prev.actionsLeft <= 0) return prev;
         if (prev.resources < initiative.cost) return prev;
         if (prev.playedInitiatives.includes(initiativeId)) return prev;
+        if (prev.pendingDecision) return prev; // Can't act while decision pending
 
         const newDimensions = { ...prev.dimensions };
         const effects = initiative.effects;
         
-        // Apply effects with diminishing returns for positive changes
         if (effects.credibility) {
           newDimensions.credibility = Math.min(100, Math.max(0, 
             applyDiminishingReturns(newDimensions.credibility, effects.credibility)
@@ -162,7 +162,6 @@ export const useGameState = (preset: IndustryPreset) => {
           ));
         }
         if (effects.selfOrientation) {
-          // Self-orientation changes are direct (no diminishing returns)
           newDimensions.selfOrientation = Math.min(100, Math.max(5,
             newDimensions.selfOrientation + effects.selfOrientation
           ));
@@ -171,30 +170,26 @@ export const useGameState = (preset: IndustryPreset) => {
         const profitChange = effects.profit || 0;
         const trust = calculateTrust(newDimensions);
         
-        // Build effect description
-        const effectParts: string[] = [];
-        if (effects.credibility) effectParts.push((effects.credibility > 0 ? "+" : "") + effects.credibility + " Cred");
-        if (effects.reliability) effectParts.push((effects.reliability > 0 ? "+" : "") + effects.reliability + " Rel");
-        if (effects.intimacy) effectParts.push((effects.intimacy > 0 ? "+" : "") + effects.intimacy + " Int");
-        if (effects.selfOrientation) effectParts.push((effects.selfOrientation > 0 ? "+" : "") + effects.selfOrientation + " Self");
-        
-        const temptingNote = initiative.tempting ? " [TEMPTING]" : "";
+        // Category tag
+        const categoryLabel = initiative.category === "tempting" ? " [TEMPTING]" : 
+                             initiative.category === "necessary" ? " [NECESSARY]" :
+                             initiative.category === "trade-off" ? " [TRADE-OFF]" : "";
 
         return {
           ...prev,
           resources: prev.resources - initiative.cost,
-          profit: prev.profit + profitChange,
+          profit: Math.max(0, prev.profit + profitChange),
           actionsLeft: prev.actionsLeft - 1,
           dimensions: newDimensions,
           playedInitiatives: [...prev.playedInitiatives, initiativeId],
           eventLog: [
             ...prev.eventLog,
-            "[Round " + prev.round + "] " + initiative.title + temptingNote + " (" + effectParts.join(", ") + ") - Trust: " + trust + "%",
+            "→ " + initiative.title + categoryLabel + " - Trust: " + trust + "%",
           ],
         };
       });
 
-      // Determine which dimension was most affected for feedback
+      // Generate feedback
       const effects = initiative.effects;
       const dims: Array<keyof TrustDimensions> = ["credibility", "reliability", "intimacy", "selfOrientation"];
       let maxDim: keyof TrustDimensions = "credibility";
@@ -217,12 +212,65 @@ export const useGameState = (preset: IndustryPreset) => {
     [preset, addFeedback, state.dimensions]
   );
 
+  // Check for triggered events based on current state
+  const getTriggeredChallenge = useCallback((dims: TrustDimensions, profit: number): Challenge | null => {
+    const trust = calculateTrust(dims);
+    
+    // Find challenges that match current state
+    const triggeredChallenges = preset.challenges.filter(c => {
+      if (!c.trigger) return false;
+      
+      switch (c.trigger.condition) {
+        case "low_reliability":
+          return dims.reliability < (c.trigger.threshold || 35);
+        case "high_self_orientation":
+          return dims.selfOrientation > (c.trigger.threshold || 55);
+        case "low_profit":
+          return profit < (c.trigger.threshold || 50);
+        case "high_trust":
+          return trust > (c.trigger.threshold || 55);
+        default:
+          return false;
+      }
+    });
+
+    if (triggeredChallenges.length > 0 && Math.random() < 0.4) {
+      return triggeredChallenges[Math.floor(Math.random() * triggeredChallenges.length)];
+    }
+
+    // Otherwise random event (30% chance)
+    if (Math.random() < 0.3) {
+      const randomChallenges = preset.challenges.filter(c => 
+        c.trigger?.condition === "random" || !c.trigger
+      );
+      if (randomChallenges.length > 0) {
+        return randomChallenges[Math.floor(Math.random() * randomChallenges.length)];
+      }
+    }
+
+    return null;
+  }, [preset]);
+
   const applyChallenge = useCallback(
     (challenge: Challenge) => {
+      // If challenge has options, set it as pending decision
+      if (challenge.options && challenge.options.length > 0) {
+        setState((prev) => ({
+          ...prev,
+          pendingDecision: challenge,
+          eventLog: [
+            ...prev.eventLog,
+            "⚠️ DECISION: " + challenge.title,
+            "   " + challenge.description,
+          ],
+        }));
+        return;
+      }
+
+      // Otherwise apply directly
       setState((prev) => {
         const newDimensions = { ...prev.dimensions };
         
-        // Apply challenge effect to the specified dimension
         if (challenge.dimension === "selfOrientation") {
           newDimensions.selfOrientation = Math.min(100, Math.max(5,
             newDimensions.selfOrientation + challenge.effect
@@ -237,15 +285,14 @@ export const useGameState = (preset: IndustryPreset) => {
         let newCustomers = prev.customers;
 
         if (challenge.profitEffect) {
-          newProfit = Math.floor(prev.profit + challenge.profitEffect);
+          newProfit = Math.max(0, Math.floor(prev.profit + challenge.profitEffect));
         }
 
         if (challenge.customerEffect) {
-          newCustomers = Math.floor(prev.customers * (1 + challenge.customerEffect / 100));
+          newCustomers = Math.max(100, Math.floor(prev.customers * (1 + challenge.customerEffect / 100)));
         }
 
         const trust = calculateTrust(newDimensions);
-        const dimLabel = challenge.dimension.charAt(0).toUpperCase() + challenge.dimension.slice(1);
         const effectSign = challenge.effect > 0 ? "+" : "";
 
         return {
@@ -256,7 +303,7 @@ export const useGameState = (preset: IndustryPreset) => {
           currentChallenge: challenge,
           eventLog: [
             ...prev.eventLog,
-            "[Round " + prev.round + "] CHALLENGE: " + challenge.title + " (" + effectSign + challenge.effect + " " + dimLabel + ") - Trust: " + trust + "%",
+            "📢 " + challenge.title + " (" + effectSign + challenge.effect + " " + challenge.dimension + ") - Trust: " + trust + "%",
           ],
         };
       });
@@ -268,44 +315,130 @@ export const useGameState = (preset: IndustryPreset) => {
     [addFeedback, state.dimensions]
   );
 
+  const resolveDecision = useCallback((optionIndex: number) => {
+    setState((prev) => {
+      if (!prev.pendingDecision?.options) return prev;
+      
+      const option = prev.pendingDecision.options[optionIndex];
+      if (!option) return prev;
+
+      const newDimensions = { ...prev.dimensions };
+      const effects = option.effects;
+      
+      if (effects.credibility) {
+        newDimensions.credibility = Math.min(100, Math.max(0, 
+          newDimensions.credibility + effects.credibility
+        ));
+      }
+      if (effects.reliability) {
+        newDimensions.reliability = Math.min(100, Math.max(0,
+          newDimensions.reliability + effects.reliability
+        ));
+      }
+      if (effects.intimacy) {
+        newDimensions.intimacy = Math.min(100, Math.max(0,
+          newDimensions.intimacy + effects.intimacy
+        ));
+      }
+      if (effects.selfOrientation) {
+        newDimensions.selfOrientation = Math.min(100, Math.max(5,
+          newDimensions.selfOrientation + effects.selfOrientation
+        ));
+      }
+
+      let newProfit = prev.profit;
+      let newCustomers = prev.customers;
+
+      if (effects.profit) {
+        newProfit = Math.max(0, prev.profit + effects.profit);
+      }
+      if (effects.customers) {
+        newCustomers = Math.max(100, Math.floor(prev.customers * (1 + effects.customers / 100)));
+      }
+
+      const trust = calculateTrust(newDimensions);
+
+      return {
+        ...prev,
+        dimensions: newDimensions,
+        profit: newProfit,
+        customers: newCustomers,
+        pendingDecision: null,
+        eventLog: [
+          ...prev.eventLog,
+          "   → Chose: " + option.label + " - Trust: " + trust + "%",
+        ],
+      };
+    });
+  }, []);
+
   const nextRound = useCallback(() => {
     setState((prev) => {
+      if (prev.pendingDecision) return prev; // Must resolve decision first
+      
       if (prev.round >= prev.maxRounds) {
         const finalTrust = calculateTrust(prev.dimensions);
+        let rating = "";
+        if (finalTrust >= 55) rating = "Excellent - Genuinely trusted";
+        else if (finalTrust >= 45) rating = "Good - Trusted but room to grow";
+        else if (finalTrust >= 35) rating = "Mediocre - Average trust, average results";
+        else if (finalTrust >= 25) rating = "Poor - Significant trust deficit";
+        else rating = "Failed - Trust has collapsed";
+
         return {
           ...prev,
           gameOver: true,
           eventLog: [
             ...prev.eventLog,
-            "=== SIMULATION COMPLETE ===",
-            "Final Trust Score: " + finalTrust + "%",
-            "C: " + Math.round(prev.dimensions.credibility) + " + R: " + Math.round(prev.dimensions.reliability) + " + I: " + Math.round(prev.dimensions.intimacy) + " / S: " + Math.round(prev.dimensions.selfOrientation),
-            "Final " + preset.metrics.customersLabel + ": " + prev.customers,
-            "Final " + preset.metrics.profitLabel + ": " + prev.profit,
+            "",
+            "══════════════════════════",
+            "SIMULATION COMPLETE",
+            "══════════════════════════",
+            "",
+            "Final Trust: " + finalTrust + "%",
+            "Rating: " + rating,
+            "",
+            "C: " + Math.round(prev.dimensions.credibility) + 
+            " + R: " + Math.round(prev.dimensions.reliability) + 
+            " + I: " + Math.round(prev.dimensions.intimacy) + 
+            " / S: " + Math.round(prev.dimensions.selfOrientation),
+            "",
+            preset.metrics.customersLabel + ": " + prev.customers,
+            preset.metrics.profitLabel + ": " + prev.profit,
           ],
         };
       }
 
-      // Self-orientation creeps up slightly each round (pressure to monetize)
+      // Self-orientation drift - pressure to monetize increases
       const newDimensions = { ...prev.dimensions };
-      newDimensions.selfOrientation = Math.min(100, newDimensions.selfOrientation + 1);
+      newDimensions.selfOrientation = Math.min(100, newDimensions.selfOrientation + 2); // +2 per round
       
-      // Small decay in other dimensions without reinforcement
-      newDimensions.credibility = Math.max(0, newDimensions.credibility - 0.5);
-      newDimensions.reliability = Math.max(0, newDimensions.reliability - 0.5);
-      newDimensions.intimacy = Math.max(0, newDimensions.intimacy - 0.5);
+      // Decay without reinforcement - stronger decay
+      newDimensions.credibility = Math.max(0, newDimensions.credibility - 1);
+      newDimensions.reliability = Math.max(0, newDimensions.reliability - 1);
+      newDimensions.intimacy = Math.max(0, newDimensions.intimacy - 1.5); // Intimacy decays faster
 
       const trust = calculateTrust(newDimensions);
       
-      // Resource gain based on profit
-      const resourceGain = Math.max(1, Math.floor(prev.profit / 25));
+      // Resource gain - tighter, based on profit
+      const resourceGain = Math.max(1, Math.floor(prev.profit / 30));
 
       // Customer growth/loss based on trust
       let customerChange = 0;
-      if (trust >= 60) {
-        customerChange = Math.floor(prev.customers * 0.05);
+      if (trust >= 55) {
+        customerChange = Math.floor(prev.customers * 0.08);
+      } else if (trust >= 40) {
+        customerChange = Math.floor(prev.customers * 0.02);
       } else if (trust < 30) {
-        customerChange = -Math.floor(prev.customers * 0.05);
+        customerChange = -Math.floor(prev.customers * 0.08);
+      } else if (trust < 40) {
+        customerChange = -Math.floor(prev.customers * 0.03);
+      }
+
+      // Profit pressure - if low trust, profit erodes
+      let profitChange = 0;
+      if (trust < 30) {
+        profitChange = -5;
       }
 
       return {
@@ -313,31 +446,37 @@ export const useGameState = (preset: IndustryPreset) => {
         round: prev.round + 1,
         actionsLeft: prev.maxActions,
         resources: prev.resources + resourceGain,
-        customers: prev.customers + customerChange,
+        customers: Math.max(100, prev.customers + customerChange),
+        profit: Math.max(0, prev.profit + profitChange),
         dimensions: newDimensions,
         currentChallenge: null,
         eventLog: [
           ...prev.eventLog,
-          "=== Round " + (prev.round + 1) + " ===",
-          "Resources +" + resourceGain + ". Self-orientation drifts up (+1). Trust: " + trust + "%",
+          "",
+          "══ Round " + (prev.round + 1) + " of " + prev.maxRounds + " ══",
+          "Resources +" + resourceGain + " | S drifts +2 | C/R/I decay",
+          "Trust: " + trust + "% | " + preset.metrics.customersLabel + ": " + (prev.customers + customerChange),
         ],
       };
     });
 
-    // Random challenge (50% chance)
-    if (Math.random() < 0.5) {
-      const randomChallenge = preset.challenges[Math.floor(Math.random() * preset.challenges.length)];
-      setTimeout(() => applyChallenge(randomChallenge), 300);
-    }
-  }, [preset, applyChallenge]);
+    // Check for triggered or random challenges
+    setTimeout(() => {
+      const challenge = getTriggeredChallenge(state.dimensions, state.profit);
+      if (challenge) {
+        applyChallenge(challenge);
+      }
+    }, 500);
+  }, [preset, applyChallenge, getTriggeredChallenge, state.dimensions, state.profit]);
 
   const resetGame = useCallback(() => {
     setState({
       ...initialState,
       eventLog: [
-        "Welcome to Trust Builder!",
-        "Trust = (Credibility + Reliability + Intimacy) / Self-Orientation",
+        "=== " + preset.name + " ===",
         preset.welcomeMessage,
+        "Trust = (C + R + I) / S. Start: 35/35/35, S: 35",
+        "You have 2 actions per round. Choose wisely.",
       ],
     });
   }, [preset]);
@@ -357,6 +496,7 @@ export const useGameState = (preset: IndustryPreset) => {
     nextRound,
     resetGame,
     getAvailableInitiatives,
+    resolveDecision,
     preset,
   };
 };

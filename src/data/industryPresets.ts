@@ -9,8 +9,22 @@ export interface Initiative {
     intimacy?: number;
     selfOrientation?: number;
     profit?: number;
+    customers?: number;
   };
-  tempting?: boolean; // High profit but increases self-orientation
+  category: "investment" | "trade-off" | "necessary" | "tempting";
+  tags?: string[];
+}
+
+export interface ChallengeOption {
+  label: string;
+  effects: {
+    credibility?: number;
+    reliability?: number;
+    intimacy?: number;
+    selfOrientation?: number;
+    profit?: number;
+    customers?: number;
+  };
 }
 
 export interface Challenge {
@@ -20,6 +34,13 @@ export interface Challenge {
   effect: number;
   profitEffect?: number;
   customerEffect?: number;
+  // New: some challenges offer choices
+  options?: ChallengeOption[];
+  // New: some challenges are triggered by game state
+  trigger?: {
+    condition: "low_reliability" | "high_self_orientation" | "low_profit" | "high_trust" | "random";
+    threshold?: number;
+  };
 }
 
 export interface CustomerPersona {
@@ -76,43 +97,100 @@ export const industryPresets: Record<string, IndustryPreset> = {
       customersLabel: "Stakeholders",
     },
     initiatives: [
-      // Credibility builders
-      { id: 1, title: "Expert Certification", description: "Achieve recognized industry certifications and qualifications.", cost: 3, effects: { credibility: 12, profit: -5 } },
-      { id: 2, title: "Thought Leadership", description: "Publish research and speak at industry conferences.", cost: 2, effects: { credibility: 8, profit: -3 } },
-      { id: 3, title: "Transparent Reporting", description: "Publish detailed performance metrics and outcomes.", cost: 2, effects: { credibility: 10, selfOrientation: -2, profit: -4 } },
-      { id: 4, title: "Third-Party Audits", description: "Commission independent audits and publish results.", cost: 4, effects: { credibility: 15, profit: -8 } },
+      // === INVESTMENTS: Good but expensive ===
+      { id: 1, title: "Expert Certification", description: "Industry certifications and qualifications. Credible but costly.", cost: 4, effects: { credibility: 10, profit: -8 }, category: "investment" },
+      { id: 2, title: "Service Guarantee", description: "Iron-clad SLA with penalties. Reliable but risky.", cost: 4, effects: { reliability: 10, profit: -10 }, category: "investment" },
+      { id: 3, title: "Dedicated Account Managers", description: "Personal relationships. Intimate but expensive to scale.", cost: 4, effects: { intimacy: 10, profit: -8 }, category: "investment" },
+      { id: 4, title: "Customer-First Policy", description: "Formally prioritize customer outcomes. Expensive but reduces self-orientation.", cost: 5, effects: { selfOrientation: -8, profit: -15 }, category: "investment" },
       
-      // Reliability builders
-      { id: 5, title: "Service Guarantee", description: "Implement iron-clad service level guarantees with penalties.", cost: 3, effects: { reliability: 12, profit: -6 } },
-      { id: 6, title: "Consistent Processes", description: "Document and standardize all customer-facing processes.", cost: 2, effects: { reliability: 8, profit: -2 } },
-      { id: 7, title: "Proactive Communication", description: "Always update stakeholders before they need to ask.", cost: 2, effects: { reliability: 10, intimacy: 3, profit: -4 } },
-      { id: 8, title: "Crisis Preparedness", description: "Develop and test comprehensive contingency plans.", cost: 3, effects: { reliability: 10, profit: -5 } },
+      // === TRADE-OFFS: Mixed effects, not obviously good or bad ===
+      { id: 10, title: "Standardize Processes", description: "More consistent but less personal. Efficiency vs intimacy.", cost: 2, effects: { reliability: 6, intimacy: -4, profit: 5 }, category: "trade-off" },
+      { id: 11, title: "Aggressive Hiring", description: "Scale fast but quality may slip. Growth vs reliability.", cost: 3, effects: { reliability: -5, profit: 8, customers: 10 }, category: "trade-off" },
+      { id: 12, title: "Marketing Campaign", description: "Raise profile but seems self-promotional.", cost: 3, effects: { credibility: 4, selfOrientation: 4, profit: 6 }, category: "trade-off" },
+      { id: 13, title: "Premium Tier Launch", description: "Better margins but may seem elitist.", cost: 3, effects: { selfOrientation: 3, intimacy: -2, profit: 12 }, category: "trade-off" },
+      { id: 14, title: "AI-Powered Support", description: "24/7 availability but less human touch.", cost: 3, effects: { reliability: 5, intimacy: -6, profit: 4 }, category: "trade-off" },
+      { id: 15, title: "Transparent Pricing", description: "Builds trust but reveals margins.", cost: 2, effects: { selfOrientation: -5, credibility: 3, profit: -8 }, category: "trade-off" },
+      { id: 16, title: "Partner Network", description: "Extended reach but shared responsibility.", cost: 2, effects: { credibility: -3, reliability: -2, profit: 10 }, category: "trade-off" },
+      { id: 17, title: "Fast-Track Delivery", description: "Speed vs thoroughness.", cost: 3, effects: { reliability: 4, credibility: -3, profit: 5 }, category: "trade-off" },
       
-      // Intimacy builders
-      { id: 9, title: "Deep Listening Program", description: "Structured programs to truly understand stakeholder needs.", cost: 2, effects: { intimacy: 12, profit: -3 } },
-      { id: 10, title: "Personalized Service", description: "Tailor interactions to individual stakeholder contexts.", cost: 3, effects: { intimacy: 10, profit: -5 } },
-      { id: 11, title: "Vulnerability & Honesty", description: "Admit mistakes openly and share challenges authentically.", cost: 1, effects: { intimacy: 8, credibility: 3, selfOrientation: -3, profit: -2 } },
-      { id: 12, title: "Confidentiality Excellence", description: "Go above and beyond in protecting stakeholder information.", cost: 2, effects: { intimacy: 10, profit: -4 } },
+      // === NECESSARY EVILS: Things you have to do to survive ===
+      { id: 20, title: "Annual Price Increase", description: "Match inflation. Stakeholders won't like it but margins need it.", cost: 1, effects: { selfOrientation: 4, intimacy: -3, profit: 15 }, category: "necessary" },
+      { id: 21, title: "Cost Cutting Round", description: "Reduce overhead. Service quality may suffer.", cost: 1, effects: { reliability: -4, intimacy: -2, profit: 12 }, category: "necessary" },
+      { id: 22, title: "Outsource Support", description: "Cheaper support but less control.", cost: 1, effects: { reliability: -3, intimacy: -5, profit: 10 }, category: "necessary" },
+      { id: 23, title: "Reduce Free Tier", description: "Convert freeloaders. Seems grabby but financially necessary.", cost: 1, effects: { selfOrientation: 5, profit: 10 }, category: "necessary" },
+      { id: 24, title: "Staff Restructuring", description: "Let people go to maintain viability.", cost: 1, effects: { reliability: -3, intimacy: -4, credibility: -2, profit: 15 }, category: "necessary" },
+      { id: 25, title: "Delay Feature Release", description: "Push back promises to focus on stability.", cost: 1, effects: { credibility: -4, reliability: 3, profit: -3 }, category: "necessary" },
       
-      // Self-orientation reducers (costly but powerful)
-      { id: 13, title: "Customer-First Policy", description: "Formally prioritize customer outcomes over short-term profit.", cost: 3, effects: { selfOrientation: -8, profit: -10 } },
-      { id: 14, title: "Fair Pricing Review", description: "Audit and adjust pricing to ensure genuine value.", cost: 2, effects: { selfOrientation: -5, profit: -8 } },
-      { id: 15, title: "Long-Term Partnerships", description: "Shift from transactional to relationship-based engagement.", cost: 2, effects: { selfOrientation: -4, intimacy: 5, profit: -5 } },
-      
-      // Tempting options - high profit but increase self-orientation
-      { id: 16, title: "Premium Upselling", description: "Aggressive cross-selling and upselling programs.", cost: 1, effects: { selfOrientation: 6, profit: 15 }, tempting: true },
-      { id: 17, title: "Cost Optimization", description: "Cut service costs to improve margins.", cost: 1, effects: { selfOrientation: 4, reliability: -3, profit: 12 }, tempting: true },
-      { id: 18, title: "Marketing Spin", description: "Emphasize positives, downplay limitations in messaging.", cost: 1, effects: { selfOrientation: 5, credibility: -2, profit: 8 }, tempting: true },
+      // === TEMPTING: High short-term gain, significant trust cost ===
+      { id: 30, title: "Aggressive Upselling", description: "Push upgrades hard. Great margins, feels pushy.", cost: 1, effects: { selfOrientation: 8, intimacy: -4, profit: 20 }, category: "tempting" },
+      { id: 31, title: "Hidden Renewal Terms", description: "Auto-renew with buried terms. Profitable but shady.", cost: 1, effects: { selfOrientation: 10, credibility: -3, profit: 18 }, category: "tempting" },
+      { id: 32, title: "Overstate Capabilities", description: "Promise more than you can deliver. Wins deals, burns trust.", cost: 1, effects: { credibility: -5, selfOrientation: 6, profit: 15 }, category: "tempting" },
+      { id: 33, title: "Rush to Market", description: "Ship before ready. First-mover advantage vs quality.", cost: 2, effects: { reliability: -8, profit: 20 }, category: "tempting" },
+      { id: 34, title: "Ignore Edge Cases", description: "Focus on mainstream, neglect difficult situations.", cost: 1, effects: { intimacy: -6, selfOrientation: 4, profit: 10 }, category: "tempting" },
+      { id: 35, title: "Spin Bad News", description: "Minimize negative disclosures. Protects stock, erodes credibility.", cost: 1, effects: { credibility: -6, selfOrientation: 5, profit: 8 }, category: "tempting" },
     ],
     challenges: [
-      { title: "Expertise Questioned", description: "Media questions your qualifications and competence.", dimension: "credibility", effect: -12 },
-      { title: "Service Failure", description: "A major service outage affects many stakeholders.", dimension: "reliability", effect: -15 },
-      { title: "Data Breach", description: "Stakeholder data is compromised in a security incident.", dimension: "intimacy", effect: -18 },
-      { title: "Profit Scandal", description: "Leaked documents reveal profit was prioritized over stakeholders.", dimension: "selfOrientation", effect: 10 },
-      { title: "Competitor Collapse", description: "A competitor fails, stakeholders seek reliable alternatives.", dimension: "reliability", effect: 5, customerEffect: 10 },
-      { title: "Industry Recognition", description: "Your expertise is recognized with a prestigious award.", dimension: "credibility", effect: 8 },
-      { title: "Economic Pressure", description: "Market conditions pressure you to cut costs.", dimension: "selfOrientation", effect: 3, profitEffect: -15 },
-      { title: "Stakeholder Testimonial", description: "A prominent stakeholder publicly praises your relationship.", dimension: "intimacy", effect: 8, customerEffect: 5 },
+      // === RANDOM EVENTS ===
+      { title: "Competitor Collapse", description: "A competitor fails. Stakeholders seek alternatives.", dimension: "reliability", effect: 3, customerEffect: 15, trigger: { condition: "random" } },
+      { title: "Industry Recognition", description: "You win a respected industry award.", dimension: "credibility", effect: 8, trigger: { condition: "random" } },
+      { title: "Viral Testimonial", description: "A stakeholder shares a glowing review that goes viral.", dimension: "intimacy", effect: 6, customerEffect: 10, trigger: { condition: "random" } },
+      { title: "Market Downturn", description: "Economic conditions worsen. Everyone feels the pressure.", dimension: "selfOrientation", effect: 3, profitEffect: -20, trigger: { condition: "random" } },
+      
+      // === TRIGGERED BY STATE ===
+      { title: "Service Failure Cascade", description: "Your reliability issues cause a visible failure.", dimension: "reliability", effect: -12, customerEffect: -8, trigger: { condition: "low_reliability", threshold: 35 } },
+      { title: "Stakeholder Exodus", description: "Word spreads that you only care about yourself.", dimension: "selfOrientation", effect: 5, customerEffect: -15, trigger: { condition: "high_self_orientation", threshold: 55 } },
+      { title: "Cash Flow Crisis", description: "Low margins force immediate cost cuts.", dimension: "reliability", effect: -5, profitEffect: -10, trigger: { condition: "low_profit", threshold: 50 } },
+      { title: "Referral Surge", description: "High trust leads to organic growth.", dimension: "intimacy", effect: 3, customerEffect: 12, trigger: { condition: "high_trust", threshold: 55 } },
+      
+      // === FORCING DECISIONS ===
+      { title: "Competitor Price War", description: "Competitor undercuts prices by 30%. Match or hold?",
+        dimension: "selfOrientation", effect: 0,
+        options: [
+          { label: "Match prices", effects: { profit: -15, selfOrientation: -3, customers: 5 } },
+          { label: "Hold firm", effects: { customers: -10, credibility: 2 } },
+          { label: "Add value instead", effects: { profit: -8, reliability: 3, intimacy: 2 } }
+        ]
+      },
+      { title: "Key Person Leaves", description: "Your best person just resigned. How do you respond?",
+        dimension: "reliability", effect: -3,
+        options: [
+          { label: "Emergency hire (expensive)", effects: { profit: -12, reliability: 3 } },
+          { label: "Redistribute work", effects: { reliability: -5, intimacy: -3 } },
+          { label: "Promote from within", effects: { reliability: -2, intimacy: 4, credibility: -2 } }
+        ]
+      },
+      { title: "Data Request", description: "A stakeholder asks for data that would expose weaknesses.",
+        dimension: "credibility", effect: 0,
+        options: [
+          { label: "Full transparency", effects: { credibility: 5, selfOrientation: -4, profit: -5 } },
+          { label: "Partial disclosure", effects: { credibility: -2, selfOrientation: 2 } },
+          { label: "Decline politely", effects: { credibility: -5, intimacy: -3, selfOrientation: 4 } }
+        ]
+      },
+      { title: "Big Client Opportunity", description: "A large client wants you, but demands you stretch capacity.",
+        dimension: "selfOrientation", effect: 0,
+        options: [
+          { label: "Take it all", effects: { profit: 25, reliability: -8, selfOrientation: 5 } },
+          { label: "Negotiate scope", effects: { profit: 12, reliability: -3 } },
+          { label: "Decline respectfully", effects: { credibility: 3, selfOrientation: -4 } }
+        ]
+      },
+      { title: "Regulatory Change", description: "New regulations require expensive compliance.",
+        dimension: "credibility", effect: 0,
+        options: [
+          { label: "Full compliance", effects: { credibility: 5, profit: -15 } },
+          { label: "Minimum compliance", effects: { credibility: -2, profit: -5 } },
+          { label: "Fight the regulation", effects: { credibility: -4, selfOrientation: 6, profit: -8 } }
+        ]
+      },
+      { title: "Mistake Discovered", description: "You find a significant error that stakeholders don't know about.",
+        dimension: "credibility", effect: 0,
+        options: [
+          { label: "Proactive disclosure", effects: { credibility: 4, intimacy: 5, selfOrientation: -5, profit: -10 } },
+          { label: "Fix quietly", effects: { selfOrientation: 4, profit: -3 } },
+          { label: "Hope no one notices", effects: { selfOrientation: 6 } }
+        ]
+      },
     ],
     personas: [
       { id: "analytical", name: "Alex", role: "Analytical Stakeholder", avatar: "A", weights: { credibility: 0.5, reliability: 0.3, intimacy: 0.2 } },
@@ -122,37 +200,37 @@ export const industryPresets: Record<string, IndustryPreset> = {
     feedback: {
       credibility: {
         high: ["Their expertise is genuinely world-class. I trust their judgment completely.", "Everything they claim checks out. No exaggeration, no spin.", "They really know their stuff - I learn something every interaction."],
-        medium: ["They seem competent enough, though I sometimes wonder about depth.", "Their credentials look fine, but I have not seen them truly tested.", "Knowledgeable, but not distinctively so."],
-        low: ["I am not convinced they really know what they are doing.", "Their claims do not match what I have observed.", "I question whether they have the expertise they project."],
+        medium: ["They seem competent enough, though I sometimes wonder about depth.", "Their credentials look fine, but I haven't seen them truly tested.", "Knowledgeable, but not distinctively so."],
+        low: ["I'm not convinced they really know what they're doing.", "Their claims don't match what I've observed.", "I question whether they have the expertise they project."],
       },
       reliability: {
-        high: ["Like clockwork. I never have to wonder or follow up.", "They do what they say, every single time. It is remarkable.", "I can plan around their commitments with complete confidence."],
+        high: ["Like clockwork. I never have to wonder or follow up.", "They do what they say, every single time. It's remarkable.", "I can plan around their commitments with complete confidence."],
         medium: ["Usually reliable, with occasional hiccups.", "They generally deliver, though sometimes need reminding.", "Reasonably dependable, nothing exceptional."],
-        low: ["I have learned to always have a backup plan.", "Promises seem to be more aspirational than actual.", "Following up has become a part-time job."],
+        low: ["I've learned to always have a backup plan.", "Promises seem to be more aspirational than actual.", "Following up has become a part-time job."],
       },
       intimacy: {
-        high: ["They truly understand our situation. I can be completely candid.", "I feel genuinely cared for, not just processed.", "They remember details I have forgotten myself. It is personal."],
-        medium: ["Professional and pleasant, though somewhat transactional.", "They listen, though I am not sure how deeply.", "Cordial relationship, but I keep some things back."],
-        low: ["I feel like a number, not a person.", "Sharing anything sensitive feels risky.", "They go through the motions but there is no real connection."],
+        high: ["They truly understand our situation. I can be completely candid.", "I feel genuinely cared for, not just processed.", "They remember details I've forgotten myself. It's personal."],
+        medium: ["Professional and pleasant, though somewhat transactional.", "They listen, though I'm not sure how deeply.", "Cordial relationship, but I keep some things back."],
+        low: ["I feel like a number, not a person.", "Sharing anything sensitive feels risky.", "They go through the motions but there's no real connection."],
       },
       selfOrientation: {
-        high: ["Everything feels designed to extract maximum value from me.", "I constantly wonder what is in it for them.", "The relationship feels one-sided - in their favor."],
+        high: ["Everything feels designed to extract maximum value from me.", "I constantly wonder what's in it for them.", "The relationship feels one-sided - in their favor."],
         medium: ["They balance their interests with mine reasonably.", "Commercial but not exploitative.", "I understand they need to profit, and it feels fair."],
-        low: ["They genuinely seem to put my interests first.", "I have seen them sacrifice short-term gain for my benefit.", "Rare to find an organization this genuinely client-focused."],
+        low: ["They genuinely seem to put my interests first.", "I've seen them sacrifice short-term gain for my benefit.", "Rare to find an organization this genuinely client-focused."],
       },
     },
     insights: [
       "Trust = (Credibility + Reliability + Intimacy) / Self-Orientation",
       "You can excel in all three numerators, but high self-orientation divides it all away.",
-      "Credibility is what you know. Reliability is doing what you say. Intimacy is how safe people feel.",
-      "Self-orientation is the silent killer - stakeholders sense it even when you hide it.",
-      "Short-term profit grabs often cost more in trust than they gain in revenue.",
-      "Recovering from self-orientation perception is harder than building the other three.",
-      "Different stakeholders weight the dimensions differently - know your audience.",
-      "Consistency in reliability beats occasional excellence.",
+      "Real business requires trade-offs - there are no purely good options.",
+      "Necessary evils exist. The question is which ones and how often.",
+      "Ignoring finances will destroy you as surely as ignoring trust.",
+      "Tempting options are tempting for a reason. Know when to resist.",
+      "Your state affects what happens - low reliability invites failures.",
+      "Different stakeholders weight the dimensions differently.",
     ],
-    welcomeMessage: "Build genuine trust using the Trust Equation: (Credibility + Reliability + Intimacy) / Self-Orientation.",
-    goalDescription: "Maximize trust by building C, R, and I while keeping self-orientation low.",
+    welcomeMessage: "Build trust through difficult trade-offs. There are no easy answers.",
+    goalDescription: "Survive 8 rounds while maximizing trust. You'll face hard choices.",
   },
 
   finance: {
@@ -166,43 +244,70 @@ export const industryPresets: Record<string, IndustryPreset> = {
       customersLabel: "Clients",
     },
     initiatives: [
-      // Credibility
-      { id: 1, title: "Regulatory Excellence", description: "Exceed compliance requirements and publicize your record.", cost: 3, effects: { credibility: 12, profit: -6 } },
-      { id: 2, title: "Financial Education", description: "Offer free financial literacy resources to clients.", cost: 2, effects: { credibility: 8, selfOrientation: -3, profit: -4 } },
-      { id: 3, title: "Performance Transparency", description: "Publish detailed, honest performance data including losses.", cost: 2, effects: { credibility: 10, profit: -3 } },
-      { id: 4, title: "Expert Advisory Team", description: "Hire and showcase credentialed financial experts.", cost: 4, effects: { credibility: 15, profit: -10 } },
+      // === INVESTMENTS ===
+      { id: 1, title: "Regulatory Excellence", description: "Exceed all compliance requirements.", cost: 4, effects: { credibility: 10, profit: -10 }, category: "investment" },
+      { id: 2, title: "System Redundancy", description: "Bulletproof infrastructure, 99.99% uptime.", cost: 5, effects: { reliability: 12, profit: -15 }, category: "investment" },
+      { id: 3, title: "Dedicated Wealth Advisors", description: "Personal advisors for every significant client.", cost: 5, effects: { intimacy: 10, profit: -12 }, category: "investment" },
+      { id: 4, title: "Fiduciary Commitment", description: "Legally bind to client-first principles.", cost: 5, effects: { selfOrientation: -10, credibility: 4, profit: -12 }, category: "investment" },
       
-      // Reliability
-      { id: 5, title: "Instant Access Guarantee", description: "Guarantee immediate access to funds with no delays.", cost: 3, effects: { reliability: 12, profit: -8 } },
-      { id: 6, title: "Proactive Alerts", description: "Notify clients of issues before they discover them.", cost: 2, effects: { reliability: 10, intimacy: 3, profit: -4 } },
-      { id: 7, title: "System Redundancy", description: "Invest in bulletproof infrastructure with 99.99% uptime.", cost: 4, effects: { reliability: 15, profit: -12 } },
-      { id: 8, title: "Consistent Experience", description: "Same quality service across all channels and touchpoints.", cost: 2, effects: { reliability: 8, profit: -4 } },
+      // === TRADE-OFFS ===
+      { id: 10, title: "Robo-Advisory", description: "Algorithmic advice. Scalable but impersonal.", cost: 3, effects: { reliability: 5, intimacy: -5, profit: 8 }, category: "trade-off" },
+      { id: 11, title: "Branch Closures", description: "Digital-first strategy. Efficient but alienates some.", cost: 2, effects: { intimacy: -6, reliability: 3, profit: 15 }, category: "trade-off" },
+      { id: 12, title: "Acquisition", description: "Buy a competitor. Growth but integration challenges.", cost: 4, effects: { reliability: -4, profit: 12, customers: 15 }, category: "trade-off" },
+      { id: 13, title: "Fee Simplification", description: "Transparent fees. Trust builds but revenue drops.", cost: 2, effects: { selfOrientation: -6, credibility: 4, profit: -12 }, category: "trade-off" },
+      { id: 14, title: "Wealth Threshold", description: "Focus on high-net-worth. Better margins, exclusionary.", cost: 2, effects: { selfOrientation: 5, intimacy: 3, profit: 10 }, category: "trade-off" },
+      { id: 15, title: "Financial Education", description: "Free literacy programs. Goodwill but no direct return.", cost: 3, effects: { credibility: 5, selfOrientation: -4, profit: -8 }, category: "trade-off" },
       
-      // Intimacy
-      { id: 9, title: "Dedicated Advisors", description: "Assign personal advisors who truly know each client.", cost: 3, effects: { intimacy: 12, profit: -6 } },
-      { id: 10, title: "Life Stage Support", description: "Proactively help clients through major life transitions.", cost: 2, effects: { intimacy: 10, selfOrientation: -2, profit: -5 } },
-      { id: 11, title: "Hardship Programs", description: "Genuine support for clients facing financial difficulty.", cost: 3, effects: { intimacy: 12, selfOrientation: -5, profit: -10 } },
-      { id: 12, title: "Privacy Excellence", description: "Industry-leading data protection and discretion.", cost: 2, effects: { intimacy: 8, profit: -4 } },
+      // === NECESSARY EVILS ===
+      { id: 20, title: "Fee Increases", description: "Raise management fees. Margin pressure demands it.", cost: 1, effects: { selfOrientation: 5, intimacy: -3, profit: 18 }, category: "necessary" },
+      { id: 21, title: "Staff Reductions", description: "Reduce headcount to match market conditions.", cost: 1, effects: { reliability: -4, intimacy: -4, profit: 15 }, category: "necessary" },
+      { id: 22, title: "Offshore Operations", description: "Move back-office overseas.", cost: 1, effects: { reliability: -3, profit: 12 }, category: "necessary" },
+      { id: 23, title: "Product Rationalization", description: "Discontinue unprofitable products some clients use.", cost: 1, effects: { intimacy: -5, selfOrientation: 4, profit: 10 }, category: "necessary" },
+      { id: 24, title: "Risk Limit Tightening", description: "Restrict lending. Safer but frustrates clients.", cost: 1, effects: { credibility: 3, intimacy: -4, profit: -5 }, category: "necessary" },
       
-      // Self-orientation reducers
-      { id: 13, title: "Fee Simplification", description: "Eliminate hidden fees and simplify pricing radically.", cost: 2, effects: { selfOrientation: -8, profit: -12 } },
-      { id: 14, title: "Fiduciary Commitment", description: "Legally commit to putting client interests first.", cost: 3, effects: { selfOrientation: -10, credibility: 5, profit: -8 } },
-      { id: 15, title: "Unsuitable Product Refusal", description: "Actively refuse to sell products that do not fit client needs.", cost: 2, effects: { selfOrientation: -6, profit: -10 } },
-      
-      // Tempting
-      { id: 16, title: "Complex Products", description: "Sell high-margin complex products most clients do not understand.", cost: 1, effects: { selfOrientation: 8, profit: 20 }, tempting: true },
-      { id: 17, title: "Penalty Optimization", description: "Restructure fees to maximize penalty and late payment revenue.", cost: 1, effects: { selfOrientation: 6, reliability: -2, profit: 15 }, tempting: true },
-      { id: 18, title: "Aggressive Sales Targets", description: "Push advisors to meet volume targets over suitability.", cost: 1, effects: { selfOrientation: 7, intimacy: -3, profit: 18 }, tempting: true },
+      // === TEMPTING ===
+      { id: 30, title: "Complex Products", description: "High-margin structured products clients don't understand.", cost: 1, effects: { selfOrientation: 10, profit: 25 }, category: "tempting" },
+      { id: 31, title: "Churning Incentives", description: "Reward advisors for transaction volume.", cost: 1, effects: { selfOrientation: 8, intimacy: -5, profit: 20 }, category: "tempting" },
+      { id: 32, title: "Penalty Optimization", description: "Maximize revenue from fees and penalties.", cost: 1, effects: { selfOrientation: 7, profit: 15 }, category: "tempting" },
+      { id: 33, title: "Aggressive Cross-Selling", description: "Push products at every touchpoint.", cost: 1, effects: { selfOrientation: 8, intimacy: -4, profit: 18 }, category: "tempting" },
+      { id: 34, title: "Risk Disclosure Minimization", description: "Downplay product risks in marketing.", cost: 1, effects: { credibility: -5, selfOrientation: 6, profit: 12 }, category: "tempting" },
     ],
     challenges: [
-      { title: "Market Crash", description: "Market downturn tests your advice and client relationships.", dimension: "credibility", effect: -10, profitEffect: -20 },
-      { title: "System Outage", description: "Critical systems go down during high-activity period.", dimension: "reliability", effect: -15 },
-      { title: "Data Breach", description: "Client financial data is exposed in a security incident.", dimension: "intimacy", effect: -18 },
-      { title: "Fee Scandal", description: "Media exposes industry-wide hidden fee practices.", dimension: "selfOrientation", effect: 8 },
-      { title: "Competitor Collapse", description: "A competitor fails, clients seek stability.", dimension: "reliability", effect: 6, customerEffect: 12 },
-      { title: "Regulatory Praise", description: "Regulators publicly commend your compliance standards.", dimension: "credibility", effect: 10 },
-      { title: "Interest Rate Shock", description: "Sudden rate changes pressure margins.", dimension: "selfOrientation", effect: 4, profitEffect: -15 },
-      { title: "Client Success Story", description: "A client publicly credits you with their financial security.", dimension: "intimacy", effect: 10, customerEffect: 5 },
+      // === RANDOM ===
+      { title: "Market Rally", description: "Bull market makes everyone look smart.", dimension: "credibility", effect: 5, profitEffect: 15, trigger: { condition: "random" } },
+      { title: "Regulatory Praise", description: "Regulators commend your compliance.", dimension: "credibility", effect: 8, trigger: { condition: "random" } },
+      { title: "Fintech Disruption", description: "New players steal market share.", dimension: "reliability", effect: -3, customerEffect: -8, trigger: { condition: "random" } },
+      
+      // === STATE TRIGGERED ===
+      { title: "System Outage", description: "Critical systems fail during peak trading.", dimension: "reliability", effect: -15, customerEffect: -10, trigger: { condition: "low_reliability", threshold: 35 } },
+      { title: "Mis-selling Scandal", description: "Clients claim they were sold unsuitable products.", dimension: "selfOrientation", effect: 8, customerEffect: -12, profitEffect: -20, trigger: { condition: "high_self_orientation", threshold: 55 } },
+      { title: "Margin Call", description: "Low profits force difficult decisions.", dimension: "selfOrientation", effect: 4, profitEffect: -15, trigger: { condition: "low_profit", threshold: 50 } },
+      
+      // === FORCING ===
+      { title: "Market Crash", description: "Markets drop 20%. How do you communicate?",
+        dimension: "credibility", effect: 0,
+        options: [
+          { label: "Honest assessment", effects: { credibility: 6, intimacy: 4, selfOrientation: -3 } },
+          { label: "Calm reassurance", effects: { credibility: -2, intimacy: 2 } },
+          { label: "Opportunity spin", effects: { credibility: -5, selfOrientation: 6, profit: 5 } }
+        ]
+      },
+      { title: "Competitor Failure", description: "A rival bank collapses. Their clients seek a new home.",
+        dimension: "reliability", effect: 0,
+        options: [
+          { label: "Selective onboarding", effects: { credibility: 2, reliability: 2, customers: 10 } },
+          { label: "Take everyone", effects: { reliability: -5, customers: 25, profit: 10 } },
+          { label: "Premium terms only", effects: { selfOrientation: 5, profit: 15, customers: 5 } }
+        ]
+      },
+      { title: "Whistleblower Report", description: "Employee reports concerning practices internally.",
+        dimension: "credibility", effect: 0,
+        options: [
+          { label: "Full investigation", effects: { credibility: 5, selfOrientation: -5, profit: -10 } },
+          { label: "Quiet resolution", effects: { selfOrientation: 4, profit: -3 } },
+          { label: "Discourage complaint", effects: { selfOrientation: 8, credibility: -3 } }
+        ]
+      },
     ],
     personas: [
       { id: "hnw", name: "Patricia", role: "High-Net-Worth Client", avatar: "P", weights: { credibility: 0.4, reliability: 0.3, intimacy: 0.3 } },
@@ -211,38 +316,36 @@ export const industryPresets: Record<string, IndustryPreset> = {
     ],
     feedback: {
       credibility: {
-        high: ["Their financial expertise is exceptional. I trust their market insights completely.", "Every recommendation has been well-researched and sound.", "They understand finance deeply, not just product features."],
+        high: ["Their financial expertise is exceptional. I trust their market insights.", "Every recommendation has been sound and well-researched.", "They understand finance deeply, not just product features."],
         medium: ["They seem to know the products, less sure about broader strategy.", "Competent but I cross-check their advice.", "Adequate expertise for my basic needs."],
         low: ["Their advice has cost me money. I question their competence.", "They push products without understanding my situation.", "I know more than some of their advisors."],
       },
       reliability: {
-        high: ["My money is always accessible, systems always work.", "They have never missed a commitment in years.", "I sleep well knowing they are handling my finances."],
+        high: ["My money is always accessible, systems always work.", "They have never missed a commitment in years.", "I sleep well knowing they handle my finances."],
         medium: ["Usually reliable, occasional delays on complex requests.", "Systems work most of the time.", "Adequate but not exceptional dependability."],
-        low: ["Transactions fail, promises are broken.", "I have learned to keep backup accounts elsewhere.", "Their systems seem held together with tape."],
+        low: ["Transactions fail, promises are broken.", "I keep backup accounts elsewhere.", "Their systems seem held together with tape."],
       },
       intimacy: {
-        high: ["My advisor knows my family situation, my goals, my fears.", "They proactively reach out when life events happen.", "I would tell them things I would not tell other financial providers."],
+        high: ["My advisor knows my family, my goals, my fears.", "They proactively reach out when life events happen.", "I'd tell them things I wouldn't tell other providers."],
         medium: ["Professional relationship, appropriate boundaries.", "They know my account, not really me.", "Functional but not personal."],
-        low: ["I am an account number to them.", "Turnover means starting over every time.", "No sense that they care about my actual life."],
+        low: ["I'm an account number to them.", "Turnover means starting over every time.", "No sense that they care about my actual life."],
       },
       selfOrientation: {
         high: ["Every interaction feels like a sales pitch.", "Fees appear everywhere, always in their favor.", "They optimize for their revenue, not my outcomes."],
         medium: ["Commercial relationship with fair terms.", "They need to profit, I accept that.", "Reasonable balance of interests."],
-        low: ["They have actually talked me out of products that would have made them money.", "Fees are transparent and fair.", "I genuinely believe they put my interests first."],
+        low: ["They've talked me out of products that would have made them money.", "Fees are transparent and fair.", "I believe they put my interests first."],
       },
     },
     insights: [
       "In finance, self-orientation destroys trust faster than anywhere else.",
       "Clients remember how you treated them during market downturns.",
-      "Transparency about losses builds more credibility than hiding them.",
-      "Reliability in finance means money access when needed, period.",
       "Complex products often signal self-orientation over client interest.",
+      "Reliability in finance means money access when needed, period.",
       "The best clients come from referrals - trust compounds.",
-      "Regulatory compliance is baseline credibility, not differentiator.",
-      "Intimacy in finance means understanding life goals, not just risk tolerance.",
+      "Regulatory compliance is baseline, not differentiator.",
     ],
-    welcomeMessage: "Build a trusted financial institution using the Trust Equation.",
-    goalDescription: "Maximize client trust while resisting the temptation of high-margin but trust-destroying products.",
+    welcomeMessage: "Build a trusted financial institution. The temptation of high-margin products is real.",
+    goalDescription: "Balance profitability with client trust. Short-term grabs have long-term costs.",
   },
 
   healthcare: {
@@ -252,47 +355,73 @@ export const industryPresets: Record<string, IndustryPreset> = {
     icon: "Heart",
     metrics: {
       resourcesLabel: "Budget",
-      profitLabel: "Outcomes",
+      profitLabel: "Margin",
       customersLabel: "Patients",
     },
     initiatives: [
-      // Credibility
-      { id: 1, title: "Clinical Excellence Program", description: "Invest in top-tier clinical training and certifications.", cost: 4, effects: { credibility: 15, profit: -10 } },
-      { id: 2, title: "Outcomes Transparency", description: "Publish detailed clinical outcomes including complications.", cost: 2, effects: { credibility: 12, profit: -3 } },
-      { id: 3, title: "Research Partnership", description: "Partner with academic institutions on clinical research.", cost: 3, effects: { credibility: 10, profit: -6 } },
-      { id: 4, title: "Evidence-Based Protocols", description: "Implement and publicize rigorous evidence-based care protocols.", cost: 2, effects: { credibility: 8, reliability: 3, profit: -4 } },
+      // === INVESTMENTS ===
+      { id: 1, title: "Clinical Excellence Program", description: "Top-tier training and certifications.", cost: 5, effects: { credibility: 12, profit: -12 }, category: "investment" },
+      { id: 2, title: "Care Coordination System", description: "Seamless handoffs across all care stages.", cost: 4, effects: { reliability: 10, profit: -10 }, category: "investment" },
+      { id: 3, title: "Patient Advocates", description: "Dedicated guides for every patient journey.", cost: 4, effects: { intimacy: 10, profit: -8 }, category: "investment" },
+      { id: 4, title: "Unnecessary Care Reduction", description: "Actively reduce tests that don't add value.", cost: 3, effects: { selfOrientation: -8, credibility: 3, profit: -15 }, category: "investment" },
       
-      // Reliability
-      { id: 5, title: "Care Coordination", description: "Seamless handoffs and follow-through across all care stages.", cost: 3, effects: { reliability: 12, profit: -6 } },
-      { id: 6, title: "Appointment Guarantee", description: "Guaranteed timely appointments with minimal wait times.", cost: 3, effects: { reliability: 10, profit: -8 } },
-      { id: 7, title: "24/7 Access", description: "Round-the-clock access to care and clinical advice.", cost: 4, effects: { reliability: 12, intimacy: 3, profit: -10 } },
-      { id: 8, title: "Medication Safety System", description: "Implement comprehensive medication error prevention.", cost: 3, effects: { reliability: 10, credibility: 3, profit: -5 } },
+      // === TRADE-OFFS ===
+      { id: 10, title: "Telemedicine Expansion", description: "Virtual care. Accessible but less personal.", cost: 3, effects: { reliability: 5, intimacy: -4, profit: 6 }, category: "trade-off" },
+      { id: 11, title: "Standardized Protocols", description: "Evidence-based but less individualized care.", cost: 2, effects: { credibility: 5, intimacy: -3, reliability: 3, profit: 4 }, category: "trade-off" },
+      { id: 12, title: "Specialist Recruitment", description: "Attract top talent. Expensive but credible.", cost: 4, effects: { credibility: 8, profit: -10 }, category: "trade-off" },
+      { id: 13, title: "Community Health Investment", description: "Prevention programs. Long-term benefit, short-term cost.", cost: 3, effects: { selfOrientation: -5, intimacy: 4, profit: -10 }, category: "trade-off" },
+      { id: 14, title: "Price Transparency", description: "Clear pricing upfront. Trust builds but exposes margins.", cost: 2, effects: { selfOrientation: -6, profit: -8 }, category: "trade-off" },
       
-      // Intimacy
-      { id: 9, title: "Patient Advocates", description: "Dedicated advocates to guide patients through care journey.", cost: 3, effects: { intimacy: 12, profit: -6 } },
-      { id: 10, title: "Whole-Person Care", description: "Address emotional and social needs, not just clinical.", cost: 2, effects: { intimacy: 10, profit: -4 } },
-      { id: 11, title: "Family Inclusion", description: "Meaningfully involve families in care decisions and support.", cost: 2, effects: { intimacy: 10, profit: -3 } },
-      { id: 12, title: "Dignity Standards", description: "Rigorous training on maintaining patient dignity always.", cost: 2, effects: { intimacy: 8, profit: -3 } },
+      // === NECESSARY EVILS ===
+      { id: 20, title: "Reduce Staff Ratios", description: "Fewer nurses per patient. Financially necessary but risky.", cost: 1, effects: { reliability: -5, intimacy: -4, profit: 15 }, category: "necessary" },
+      { id: 21, title: "Close Underperforming Unit", description: "Shutter a money-losing department.", cost: 1, effects: { intimacy: -5, reliability: -3, profit: 12 }, category: "necessary" },
+      { id: 22, title: "Tighten Admission Criteria", description: "Focus on cases you can handle well.", cost: 1, effects: { intimacy: -3, credibility: 2, profit: 8 }, category: "necessary" },
+      { id: 23, title: "Reduce Charity Care", description: "Scale back free care to preserve margins.", cost: 1, effects: { selfOrientation: 6, intimacy: -4, profit: 12 }, category: "necessary" },
+      { id: 24, title: "Expedite Discharges", description: "Faster bed turnover. Efficient but feels rushed.", cost: 1, effects: { reliability: -3, intimacy: -4, profit: 10 }, category: "necessary" },
       
-      // Self-orientation reducers
-      { id: 13, title: "Unnecessary Care Reduction", description: "Actively reduce tests and procedures that do not add value.", cost: 2, effects: { selfOrientation: -8, credibility: 3, profit: -15 } },
-      { id: 14, title: "Price Transparency", description: "Clear, upfront pricing before any treatment.", cost: 2, effects: { selfOrientation: -6, profit: -8 } },
-      { id: 15, title: "Community Benefit Focus", description: "Prioritize community health over facility profits.", cost: 3, effects: { selfOrientation: -8, intimacy: 3, profit: -12 } },
-      
-      // Tempting
-      { id: 16, title: "Facility Fees", description: "Add facility fees to maximize reimbursement per visit.", cost: 1, effects: { selfOrientation: 7, profit: 18 }, tempting: true },
-      { id: 17, title: "Defensive Medicine", description: "Order extra tests primarily to reduce liability.", cost: 1, effects: { selfOrientation: 5, credibility: -2, profit: 12 }, tempting: true },
-      { id: 18, title: "High-Margin Specialties", description: "Steer investment toward profitable specialties over community needs.", cost: 1, effects: { selfOrientation: 6, profit: 15 }, tempting: true },
+      // === TEMPTING ===
+      { id: 30, title: "Facility Fees", description: "Add fees to maximize reimbursement per visit.", cost: 1, effects: { selfOrientation: 8, profit: 20 }, category: "tempting" },
+      { id: 31, title: "Defensive Medicine", description: "Extra tests primarily to reduce liability.", cost: 1, effects: { selfOrientation: 5, credibility: -2, profit: 12 }, category: "tempting" },
+      { id: 32, title: "High-Margin Specialties", description: "Steer investment toward profitable over needed services.", cost: 2, effects: { selfOrientation: 7, profit: 18 }, category: "tempting" },
+      { id: 33, title: "Upcoding Optimization", description: "Aggressive coding for maximum reimbursement.", cost: 1, effects: { selfOrientation: 8, credibility: -3, profit: 15 }, category: "tempting" },
+      { id: 34, title: "Volume-Based Incentives", description: "Pay doctors for volume, not outcomes.", cost: 1, effects: { selfOrientation: 7, credibility: -4, profit: 12 }, category: "tempting" },
     ],
     challenges: [
-      { title: "Medical Error", description: "A serious medical error becomes public.", dimension: "credibility", effect: -15 },
-      { title: "Care Delays", description: "System bottlenecks cause dangerous care delays.", dimension: "reliability", effect: -12 },
-      { title: "Privacy Breach", description: "Patient medical records are exposed.", dimension: "intimacy", effect: -18 },
-      { title: "Billing Scandal", description: "Media exposes aggressive billing practices.", dimension: "selfOrientation", effect: 12 },
-      { title: "Pandemic Response", description: "Public health crisis tests your entire system.", dimension: "reliability", effect: -8, profitEffect: -20 },
-      { title: "Clinical Breakthrough", description: "Your team achieves a notable clinical success.", dimension: "credibility", effect: 12, customerEffect: 8 },
-      { title: "Staff Shortages", description: "Healthcare worker shortage strains capacity.", dimension: "reliability", effect: -8, profitEffect: -10 },
-      { title: "Patient Testimonial", description: "A patient shares a powerful story of compassionate care.", dimension: "intimacy", effect: 10, customerEffect: 5 },
+      // === RANDOM ===
+      { title: "Clinical Breakthrough", description: "Your team achieves a notable clinical success.", dimension: "credibility", effect: 10, customerEffect: 8, trigger: { condition: "random" } },
+      { title: "Staff Shortage", description: "Healthcare worker shortage strains capacity.", dimension: "reliability", effect: -5, profitEffect: -8, trigger: { condition: "random" } },
+      { title: "Insurance Renegotiation", description: "Payer cuts reimbursement rates.", dimension: "selfOrientation", effect: 3, profitEffect: -15, trigger: { condition: "random" } },
+      
+      // === STATE TRIGGERED ===
+      { title: "Care Delay Tragedy", description: "A delay in care leads to serious harm.", dimension: "reliability", effect: -15, customerEffect: -10, trigger: { condition: "low_reliability", threshold: 35 } },
+      { title: "Billing Investigation", description: "Regulators investigate billing practices.", dimension: "selfOrientation", effect: 8, profitEffect: -20, trigger: { condition: "high_self_orientation", threshold: 55 } },
+      { title: "Budget Crisis", description: "Operating losses force immediate action.", dimension: "reliability", effect: -4, profitEffect: -10, trigger: { condition: "low_profit", threshold: 50 } },
+      
+      // === FORCING ===
+      { title: "Medical Error", description: "A serious error occurs. How do you respond?",
+        dimension: "credibility", effect: -5,
+        options: [
+          { label: "Full disclosure & apology", effects: { credibility: 4, intimacy: 6, selfOrientation: -5, profit: -15 } },
+          { label: "Standard incident report", effects: { credibility: -2, selfOrientation: 3 } },
+          { label: "Minimize exposure", effects: { credibility: -6, selfOrientation: 8, intimacy: -4 } }
+        ]
+      },
+      { title: "Pandemic Surge", description: "Cases spike. You're asked to expand beyond safe capacity.",
+        dimension: "reliability", effect: 0,
+        options: [
+          { label: "Accept all patients", effects: { reliability: -8, intimacy: 4, selfOrientation: -5 } },
+          { label: "Maintain safe limits", effects: { credibility: 3, customers: -10 } },
+          { label: "Transfer unstable patients", effects: { reliability: 2, intimacy: -5, selfOrientation: 4 } }
+        ]
+      },
+      { title: "End-of-Life Decision", description: "Family wants aggressive treatment; it won't help.",
+        dimension: "intimacy", effect: 0,
+        options: [
+          { label: "Honest conversation", effects: { credibility: 4, intimacy: 5, selfOrientation: -3, profit: -5 } },
+          { label: "Follow family wishes", effects: { intimacy: 2, selfOrientation: 3, profit: 5 } },
+          { label: "Ethics committee", effects: { credibility: 2, reliability: -2 } }
+        ]
+      },
     ],
     personas: [
       { id: "chronic", name: "Robert", role: "Chronic Care Patient", avatar: "R", weights: { credibility: 0.35, reliability: 0.35, intimacy: 0.3 } },
@@ -301,38 +430,35 @@ export const industryPresets: Record<string, IndustryPreset> = {
     ],
     feedback: {
       credibility: {
-        high: ["The clinical expertise here is outstanding. I trust my care completely.", "They stay current with the latest research and treatments.", "I have complete confidence in their medical judgment."],
+        high: ["The clinical expertise here is outstanding. I trust my care completely.", "They stay current with the latest research.", "I have complete confidence in their medical judgment."],
         medium: ["Doctors seem competent, though I sometimes seek second opinions.", "Adequate clinical care, nothing exceptional.", "They follow standard protocols well enough."],
-        low: ["I have experienced errors that shook my confidence.", "Their knowledge seems outdated.", "I research everything before accepting their recommendations."],
+        low: ["I've experienced errors that shook my confidence.", "Their knowledge seems outdated.", "I research everything before accepting their recommendations."],
       },
       reliability: {
-        high: ["Appointments run on time, follow-ups happen, nothing falls through cracks.", "The care coordination is seamless.", "I never worry about something being missed."],
-        medium: ["Usually reliable, some waits and occasional mix-ups.", "Have to follow up sometimes to ensure things happen.", "Functional but with friction."],
-        low: ["Appointments are delayed, tests get lost, chaos is normal.", "I have to manage my own care coordination.", "The system feels broken."],
+        high: ["Appointments run on time, nothing falls through cracks.", "The care coordination is seamless.", "I never worry about something being missed."],
+        medium: ["Usually reliable, some waits and occasional mix-ups.", "Have to follow up sometimes.", "Functional but with friction."],
+        low: ["Appointments are delayed, tests get lost, chaos is normal.", "I manage my own care coordination.", "The system feels broken."],
       },
       intimacy: {
         high: ["They see me as a person, not a diagnosis.", "The care and compassion are genuine.", "I feel truly heard and understood."],
         medium: ["Professional and polite, somewhat impersonal.", "Efficient but not warm.", "Clinical competence without emotional connection."],
-        low: ["I feel processed, not cared for.", "No one seems to know my story.", "The human element is completely missing."],
+        low: ["I feel processed, not cared for.", "No one seems to know my story.", "The human element is missing."],
       },
       selfOrientation: {
-        high: ["Every visit generates more bills than seems necessary.", "They push treatments I am not sure I need.", "Profit clearly drives decisions more than my health."],
-        medium: ["Reasonable balance of business and care.", "I understand they have financial pressures.", "Not exploitative but not selfless either."],
-        low: ["They have actually recommended less expensive alternatives.", "Patient outcomes clearly come first.", "I never feel like a revenue source."],
+        high: ["Every visit generates more bills than necessary.", "They push treatments I'm not sure I need.", "Profit clearly drives decisions."],
+        medium: ["Reasonable balance of business and care.", "I understand financial pressures.", "Not exploitative but not selfless either."],
+        low: ["They've recommended less expensive alternatives.", "Patient outcomes clearly come first.", "I never feel like a revenue source."],
       },
     },
     insights: [
-      "In healthcare, credibility failures can be literally life-threatening.",
+      "In healthcare, credibility failures can be life-threatening.",
       "Patients remember how they were treated when vulnerable.",
       "Unnecessary procedures are the biggest self-orientation signal.",
-      "Reliability in healthcare means no dropped handoffs, ever.",
-      "Intimacy matters more in healthcare than almost any other sector.",
-      "Transparency about errors, handled well, can actually build trust.",
-      "Family experience shapes patient trust as much as direct care.",
-      "Price transparency signals low self-orientation powerfully.",
+      "Transparency about errors, handled well, can build trust.",
+      "Family experience shapes trust as much as direct care.",
     ],
-    welcomeMessage: "Build a trusted healthcare organization using the Trust Equation.",
-    goalDescription: "Maximize patient trust while navigating the tension between outcomes and financial sustainability.",
+    welcomeMessage: "Build a trusted healthcare organization. The tension between care and margin is real.",
+    goalDescription: "Deliver trustworthy care while maintaining financial sustainability.",
   },
 
   technology: {
@@ -342,99 +468,119 @@ export const industryPresets: Record<string, IndustryPreset> = {
     icon: "Laptop",
     metrics: {
       resourcesLabel: "Engineering",
-      profitLabel: "Growth",
+      profitLabel: "Revenue",
       customersLabel: "Users",
     },
     initiatives: [
-      // Credibility
-      { id: 1, title: "Security Certifications", description: "Achieve SOC2, ISO 27001, and publicize audit results.", cost: 4, effects: { credibility: 15, profit: -10 } },
-      { id: 2, title: "Open Source Core", description: "Open source key components for community verification.", cost: 3, effects: { credibility: 12, selfOrientation: -3, profit: -6 } },
-      { id: 3, title: "Technical Transparency", description: "Publish detailed technical architecture and decision rationale.", cost: 2, effects: { credibility: 10, profit: -3 } },
-      { id: 4, title: "Bug Bounty Program", description: "Invite security researchers to find and report vulnerabilities.", cost: 2, effects: { credibility: 8, profit: -4 } },
+      // === INVESTMENTS ===
+      { id: 1, title: "Security Certifications", description: "SOC2, ISO 27001, published audits.", cost: 5, effects: { credibility: 12, profit: -12 }, category: "investment" },
+      { id: 2, title: "99.99% SLA", description: "Exceptional uptime with teeth.", cost: 5, effects: { reliability: 12, profit: -15 }, category: "investment" },
+      { id: 3, title: "Human Support Team", description: "Real humans, not just chatbots.", cost: 4, effects: { intimacy: 10, profit: -10 }, category: "investment" },
+      { id: 4, title: "No Dark Patterns", description: "Eliminate all manipulative UX.", cost: 3, effects: { selfOrientation: -10, intimacy: 3, profit: -12 }, category: "investment" },
       
-      // Reliability
-      { id: 5, title: "99.99% SLA", description: "Commit to and deliver exceptional uptime guarantees.", cost: 4, effects: { reliability: 15, profit: -12 } },
-      { id: 6, title: "Public Status Page", description: "Real-time, honest system status with incident history.", cost: 2, effects: { reliability: 10, credibility: 3, profit: -2 } },
-      { id: 7, title: "Graceful Degradation", description: "Systems that fail gracefully, never catastrophically.", cost: 3, effects: { reliability: 10, profit: -6 } },
-      { id: 8, title: "Instant Rollback", description: "Ability to instantly revert any problematic update.", cost: 2, effects: { reliability: 8, profit: -4 } },
+      // === TRADE-OFFS ===
+      { id: 10, title: "API-First Platform", description: "Developer love, but less stickiness.", cost: 3, effects: { credibility: 6, selfOrientation: -3, intimacy: -2, profit: 4 }, category: "trade-off" },
+      { id: 11, title: "Open Source Core", description: "Transparency, but competitors benefit too.", cost: 3, effects: { credibility: 8, selfOrientation: -4, profit: -5 }, category: "trade-off" },
+      { id: 12, title: "AI Integration", description: "Powerful features, privacy concerns.", cost: 3, effects: { credibility: 4, intimacy: -4, profit: 8 }, category: "trade-off" },
+      { id: 13, title: "Freemium Expansion", description: "Growth vs revenue dilution.", cost: 2, effects: { selfOrientation: -3, profit: -8, customers: 15 }, category: "trade-off" },
+      { id: 14, title: "Enterprise Focus", description: "Higher margins, less user intimacy.", cost: 2, effects: { intimacy: -4, profit: 12 }, category: "trade-off" },
+      { id: 15, title: "Data Portability", description: "Users can leave easily. Trust signal, churn risk.", cost: 2, effects: { selfOrientation: -6, intimacy: 4, profit: -5 }, category: "trade-off" },
       
-      // Intimacy
-      { id: 9, title: "Human Support", description: "Real humans available, not just chatbots and articles.", cost: 3, effects: { intimacy: 12, profit: -8 } },
-      { id: 10, title: "User Research Integration", description: "Deeply involve users in product development.", cost: 2, effects: { intimacy: 10, selfOrientation: -2, profit: -4 } },
-      { id: 11, title: "Data Portability", description: "Make it easy for users to export all their data anytime.", cost: 2, effects: { intimacy: 8, selfOrientation: -4, profit: -5 } },
-      { id: 12, title: "Privacy-First Design", description: "Minimize data collection, maximize user control.", cost: 3, effects: { intimacy: 12, selfOrientation: -3, profit: -8 } },
+      // === NECESSARY EVILS ===
+      { id: 20, title: "Sunset Legacy Features", description: "EOL features some users depend on.", cost: 1, effects: { reliability: 3, intimacy: -5, profit: 8 }, category: "necessary" },
+      { id: 21, title: "Engineering Layoffs", description: "Right-size the team.", cost: 1, effects: { reliability: -4, profit: 15 }, category: "necessary" },
+      { id: 22, title: "Price Increase", description: "Raise prices for sustainability.", cost: 1, effects: { selfOrientation: 4, intimacy: -3, profit: 15 }, category: "necessary" },
+      { id: 23, title: "Reduce Free Tier", description: "Convert free users or lose them.", cost: 1, effects: { selfOrientation: 5, customers: -5, profit: 12 }, category: "necessary" },
+      { id: 24, title: "Technical Debt Payment", description: "Pause features to fix foundations.", cost: 2, effects: { reliability: 5, credibility: -2, profit: -8 }, category: "necessary" },
       
-      // Self-orientation reducers
-      { id: 13, title: "No Dark Patterns", description: "Eliminate all manipulative UX designed to trick users.", cost: 2, effects: { selfOrientation: -10, profit: -10 } },
-      { id: 14, title: "Transparent Pricing", description: "Simple, honest pricing with no surprise charges.", cost: 1, effects: { selfOrientation: -5, profit: -6 } },
-      { id: 15, title: "User-Aligned Metrics", description: "Optimize for user success, not engagement time.", cost: 2, effects: { selfOrientation: -6, intimacy: 3, profit: -8 } },
-      
-      // Tempting
-      { id: 16, title: "Engagement Optimization", description: "Use psychology to maximize addictive usage patterns.", cost: 1, effects: { selfOrientation: 8, profit: 20 }, tempting: true },
-      { id: 17, title: "Data Monetization", description: "Sell user data and behavioral insights to third parties.", cost: 1, effects: { selfOrientation: 10, intimacy: -5, profit: 25 }, tempting: true },
-      { id: 18, title: "Switching Costs", description: "Design lock-in that makes leaving difficult.", cost: 1, effects: { selfOrientation: 7, reliability: -2, profit: 15 }, tempting: true },
+      // === TEMPTING ===
+      { id: 30, title: "Data Monetization", description: "Sell anonymized user data.", cost: 1, effects: { selfOrientation: 10, intimacy: -5, profit: 25 }, category: "tempting" },
+      { id: 31, title: "Addictive Patterns", description: "Engagement hooks that exploit psychology.", cost: 1, effects: { selfOrientation: 8, profit: 15 }, category: "tempting" },
+      { id: 32, title: "Lock-in Features", description: "Make switching painful.", cost: 1, effects: { selfOrientation: 8, reliability: 2, profit: 10 }, category: "tempting" },
+      { id: 33, title: "Feature Gating", description: "Split existing features into paid tiers.", cost: 1, effects: { selfOrientation: 7, intimacy: -3, profit: 12 }, category: "tempting" },
+      { id: 34, title: "Growth Hacking", description: "Viral mechanics that feel spammy.", cost: 1, effects: { selfOrientation: 6, credibility: -3, customers: 12, profit: 8 }, category: "tempting" },
     ],
     challenges: [
-      { title: "Security Breach", description: "A significant security vulnerability is exploited.", dimension: "credibility", effect: -15 },
-      { title: "Major Outage", description: "Extended downtime affects millions of users.", dimension: "reliability", effect: -18 },
-      { title: "Privacy Scandal", description: "Improper data handling practices are exposed.", dimension: "intimacy", effect: -15 },
-      { title: "Enshittification", description: "Users notice the product getting worse as you extract more value.", dimension: "selfOrientation", effect: 12 },
-      { title: "Competitor Breach", description: "A competitor suffers a major breach, users seek alternatives.", dimension: "credibility", effect: 5, customerEffect: 10 },
-      { title: "Viral Success", description: "Genuine user enthusiasm creates organic growth.", dimension: "intimacy", effect: 8, customerEffect: 15 },
-      { title: "VC Pressure", description: "Investors pressure for faster monetization.", dimension: "selfOrientation", effect: 5, profitEffect: -10 },
-      { title: "Open Source Win", description: "Your open source contribution is widely adopted.", dimension: "credibility", effect: 10, customerEffect: 5 },
+      // === RANDOM ===
+      { title: "Viral Success", description: "A feature goes viral organically.", dimension: "credibility", effect: 6, customerEffect: 20, trigger: { condition: "random" } },
+      { title: "Tech Press Coverage", description: "Positive coverage in major tech publication.", dimension: "credibility", effect: 8, trigger: { condition: "random" } },
+      { title: "Platform Policy Change", description: "App store changes hurt distribution.", dimension: "reliability", effect: -3, customerEffect: -8, trigger: { condition: "random" } },
+      
+      // === STATE TRIGGERED ===
+      { title: "Major Outage", description: "Extended downtime during critical period.", dimension: "reliability", effect: -15, customerEffect: -10, trigger: { condition: "low_reliability", threshold: 35 } },
+      { title: "Privacy Backlash", description: "Users revolt against data practices.", dimension: "selfOrientation", effect: 6, customerEffect: -15, trigger: { condition: "high_self_orientation", threshold: 55 } },
+      { title: "Runway Crisis", description: "Low revenue forces difficult choices.", dimension: "selfOrientation", effect: 5, profitEffect: -10, trigger: { condition: "low_profit", threshold: 50 } },
+      
+      // === FORCING ===
+      { title: "Data Breach", description: "User data is exposed. How do you respond?",
+        dimension: "intimacy", effect: -8,
+        options: [
+          { label: "Immediate full disclosure", effects: { credibility: 5, intimacy: 4, selfOrientation: -5, profit: -10 } },
+          { label: "Investigate first", effects: { credibility: -2, reliability: 2 } },
+          { label: "Minimize disclosure", effects: { credibility: -6, selfOrientation: 8, intimacy: -5 } }
+        ]
+      },
+      { title: "Acquisition Offer", description: "Big tech wants to buy you. Users worry about the future.",
+        dimension: "selfOrientation", effect: 0,
+        options: [
+          { label: "Reject offer", effects: { selfOrientation: -5, intimacy: 5, profit: -10 } },
+          { label: "Negotiate user protections", effects: { credibility: 3, profit: 15 } },
+          { label: "Accept immediately", effects: { selfOrientation: 8, intimacy: -6, profit: 30 } }
+        ]
+      },
+      { title: "Content Moderation Crisis", description: "Harmful content spreads on your platform.",
+        dimension: "credibility", effect: -5,
+        options: [
+          { label: "Aggressive moderation", effects: { credibility: 4, selfOrientation: -3, reliability: -3, profit: -8 } },
+          { label: "Community standards", effects: { reliability: 2, intimacy: 2 } },
+          { label: "Hands-off approach", effects: { credibility: -5, selfOrientation: 5, profit: 3 } }
+        ]
+      },
     ],
     personas: [
-      { id: "developer", name: "Dev", role: "Developer User", avatar: "D", weights: { credibility: 0.45, reliability: 0.35, intimacy: 0.2 } },
-      { id: "privacy", name: "Sam", role: "Privacy-Conscious User", avatar: "S", weights: { credibility: 0.3, reliability: 0.25, intimacy: 0.45 } },
-      { id: "business", name: "Chris", role: "Business User", avatar: "C", weights: { credibility: 0.3, reliability: 0.5, intimacy: 0.2 } },
+      { id: "developer", name: "Sam", role: "Developer", avatar: "S", weights: { credibility: 0.45, reliability: 0.35, intimacy: 0.2 } },
+      { id: "prosumer", name: "Taylor", role: "Power User", avatar: "T", weights: { credibility: 0.3, reliability: 0.4, intimacy: 0.3 } },
+      { id: "casual", name: "Jamie", role: "Casual User", avatar: "J", weights: { credibility: 0.25, reliability: 0.35, intimacy: 0.4 } },
     ],
     feedback: {
       credibility: {
-        high: ["Their security practices are genuinely best-in-class.", "The technical team clearly knows what they are doing.", "I trust their architecture and engineering decisions."],
-        medium: ["Seems secure enough, though I have not verified deeply.", "Standard tech company competence.", "They follow basic best practices."],
-        low: ["Their security claims do not match their actions.", "I have seen too many bugs to trust the underlying quality.", "Would not trust them with sensitive data."],
+        high: ["Their technical chops are undeniable. The product just works.", "Security practices are best-in-class.", "They clearly know what they're building."],
+        medium: ["The product is okay, nothing special technically.", "Some rough edges, but functional.", "Seems like a typical startup."],
+        low: ["Constant bugs make me question their competence.", "Security feels like an afterthought.", "I'm not sure they know what they're doing."],
       },
       reliability: {
-        high: ["Rock solid. I have never experienced unexpected downtime.", "Their status page is honest and updates are smooth.", "I build critical workflows on this without worry."],
-        medium: ["Mostly reliable, occasional hiccups.", "Uptime is acceptable for the price.", "Have had a few frustrating outages."],
-        low: ["Downtime is regular and unpredictable.", "I have lost work due to their instability.", "Cannot rely on this for anything important."],
+        high: ["Rock solid. I've never seen it go down.", "Updates are smooth and well-tested.", "I can build my workflow around this."],
+        medium: ["Usually works, occasional hiccups.", "Updates sometimes break things.", "Reliable enough, with caveats."],
+        low: ["Downtime is too frequent.", "Every update is a gamble.", "I have backup tools just in case."],
       },
       intimacy: {
-        high: ["They clearly respect my privacy and data.", "Support is human and actually helpful.", "I feel like my feedback genuinely matters."],
-        medium: ["Standard data practices, nothing concerning.", "Support exists but is impersonal.", "They listen sometimes."],
-        low: ["I feel like the product, not the customer.", "My data is clearly being exploited.", "Impossible to talk to a human."],
+        high: ["They actually listen to user feedback.", "Support is responsive and human.", "I feel like they genuinely care about users."],
+        medium: ["Standard support experience.", "Feedback seems to go into a void.", "Professional but impersonal."],
+        low: ["Users are clearly just metrics.", "Support is useless.", "They don't care about us."],
       },
       selfOrientation: {
-        high: ["Every update makes the product worse for me and better for their metrics.", "Dark patterns everywhere.", "They clearly optimize for their growth, not my success."],
-        medium: ["Normal commercial product dynamics.", "They need to make money, I get it.", "Fair value exchange."],
-        low: ["They actively help me use less when that is best for me.", "No manipulative patterns.", "Genuinely aligned with my interests."],
+        high: ["Every feature change seems designed to extract more money.", "They're clearly optimizing for engagement over value.", "I feel manipulated using this product."],
+        medium: ["They need to make money, I get it.", "Fair monetization.", "Commercial but not predatory."],
+        low: ["They leave money on the table for user benefit.", "Pricing is fair and transparent.", "Rare to see a company this user-aligned."],
       },
     },
     insights: [
-      "In tech, enshittification is the visible face of rising self-orientation.",
-      "Uptime and reliability are table stakes - failures are remembered forever.",
-      "Privacy is intimacy in the digital world.",
-      "Dark patterns are self-orientation made visible.",
-      "Developer trust is earned through transparency and documentation.",
-      "Data portability signals low self-orientation powerfully.",
-      "Security credibility takes years to build and moments to destroy.",
-      "Engagement metrics can mask growing self-orientation.",
+      "In tech, users can switch fast. Trust loss is permanent.",
+      "Dark patterns work short-term but destroy long-term trust.",
+      "Reliability is expected. Downtime is never forgotten.",
+      "Data practices are increasingly scrutinized.",
+      "Open source and transparency signal low self-orientation.",
     ],
-    welcomeMessage: "Build a trusted technology platform using the Trust Equation.",
-    goalDescription: "Maximize user trust while resisting the temptation to exploit attention and data.",
+    welcomeMessage: "Build a trusted tech company. Growth pressure will test your principles.",
+    goalDescription: "Scale while maintaining user trust. The temptation to exploit is constant.",
   },
 };
 
+// Helper functions
 export const getPreset = (id: string): IndustryPreset => {
   return industryPresets[id] || industryPresets.generic;
 };
 
-export const getPresetList = () => {
-  return Object.values(industryPresets).map(({ id, name, description, icon }) => ({
-    id,
-    name,
-    description,
-    icon,
-  }));
+export const getPresetList = (): IndustryPreset[] => {
+  return Object.values(industryPresets);
 };
