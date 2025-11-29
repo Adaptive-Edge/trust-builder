@@ -1,25 +1,23 @@
-export interface TrustPillar {
-  id: number;
-  name: string;
-  description: string;
-  focusAreas: string[];
-}
-
 export interface Initiative {
   id: number;
   title: string;
   description: string;
   cost: number;
-  pillar: number;
-  trust: number;
-  profit: number;
+  effects: {
+    credibility?: number;
+    reliability?: number;
+    intimacy?: number;
+    selfOrientation?: number;
+    profit?: number;
+  };
+  tempting?: boolean; // High profit but increases self-orientation
 }
 
 export interface Challenge {
   title: string;
   description: string;
-  effect: string;
-  pillarEffects: Record<number, number>;
+  dimension: "credibility" | "reliability" | "intimacy" | "selfOrientation";
+  effect: number;
   profitEffect?: number;
   customerEffect?: number;
 }
@@ -29,6 +27,11 @@ export interface CustomerPersona {
   name: string;
   role: string;
   avatar: string;
+  weights: {
+    credibility: number;
+    reliability: number;
+    intimacy: number;
+  };
 }
 
 export interface FeedbackSet {
@@ -47,11 +50,15 @@ export interface IndustryPreset {
     profitLabel: string;
     customersLabel: string;
   };
-  pillars: TrustPillar[];
   initiatives: Initiative[];
   challenges: Challenge[];
   personas: CustomerPersona[];
-  feedback: Record<number, FeedbackSet>;
+  feedback: {
+    credibility: FeedbackSet;
+    reliability: FeedbackSet;
+    intimacy: FeedbackSet;
+    selfOrientation: FeedbackSet;
+  };
   insights: string[];
   welcomeMessage: string;
   goalDescription: string;
@@ -68,95 +75,84 @@ export const industryPresets: Record<string, IndustryPreset> = {
       profitLabel: "Performance",
       customersLabel: "Stakeholders",
     },
-    pillars: [
-      {
-        id: 1,
-        name: "Product & Service Excellence",
-        description: "Quality, reliability, and value delivery",
-        focusAreas: ["Quality Assurance", "Service Delivery", "Innovation"],
-      },
-      {
-        id: 2,
-        name: "Ethics & Integrity",
-        description: "Transparency, honesty, and fair practices",
-        focusAreas: ["Ethical Culture", "Compliance", "Transparent Communication"],
-      },
-      {
-        id: 3,
-        name: "Social Responsibility",
-        description: "Community impact, sustainability, and wellbeing",
-        focusAreas: ["Sustainability", "Community Impact", "Employee Wellbeing"],
-      },
-      {
-        id: 4,
-        name: "Stakeholder Engagement",
-        description: "Relationships, partnerships, and reputation",
-        focusAreas: ["Customer Relations", "Partner Ecosystem", "Public Image"],
-      },
-    ],
     initiatives: [
-      { id: 1, title: "Quality Certification", description: "Achieve and publicize industry-standard quality certifications.", cost: 3, pillar: 1, trust: 12, profit: -8 },
-      { id: 2, title: "Service Guarantee", description: "Implement a no-questions-asked service guarantee program.", cost: 2, pillar: 1, trust: 10, profit: -5 },
-      { id: 3, title: "Innovation Lab", description: "Create a dedicated innovation team to improve offerings.", cost: 4, pillar: 1, trust: 8, profit: -10 },
-      { id: 4, title: "Ethics Training", description: "Mandatory ethics training for all employees with public commitment.", cost: 2, pillar: 2, trust: 10, profit: -4 },
-      { id: 5, title: "Transparency Report", description: "Publish annual transparency report on operations and decisions.", cost: 2, pillar: 2, trust: 12, profit: -3 },
-      { id: 6, title: "Whistleblower Program", description: "Establish protected channels for reporting concerns.", cost: 1, pillar: 2, trust: 8, profit: -2 },
-      { id: 7, title: "Sustainability Initiative", description: "Launch comprehensive environmental sustainability program.", cost: 4, pillar: 3, trust: 15, profit: -12 },
-      { id: 8, title: "Community Partnership", description: "Partner with local organizations on community projects.", cost: 2, pillar: 3, trust: 10, profit: -5 },
-      { id: 9, title: "Employee Wellness", description: "Implement comprehensive employee wellness program.", cost: 3, pillar: 3, trust: 8, profit: -6 },
-      { id: 10, title: "Customer Advisory Board", description: "Create formal customer feedback and advisory structure.", cost: 2, pillar: 4, trust: 10, profit: 0 },
-      { id: 11, title: "Partner Summit", description: "Host annual partner and stakeholder engagement event.", cost: 3, pillar: 4, trust: 8, profit: -5 },
-      { id: 12, title: "Thought Leadership", description: "Establish thought leadership through publications and speaking.", cost: 2, pillar: 4, trust: 6, profit: 2 },
+      // Credibility builders
+      { id: 1, title: "Expert Certification", description: "Achieve recognized industry certifications and qualifications.", cost: 3, effects: { credibility: 12, profit: -5 } },
+      { id: 2, title: "Thought Leadership", description: "Publish research and speak at industry conferences.", cost: 2, effects: { credibility: 8, profit: -3 } },
+      { id: 3, title: "Transparent Reporting", description: "Publish detailed performance metrics and outcomes.", cost: 2, effects: { credibility: 10, selfOrientation: -2, profit: -4 } },
+      { id: 4, title: "Third-Party Audits", description: "Commission independent audits and publish results.", cost: 4, effects: { credibility: 15, profit: -8 } },
+      
+      // Reliability builders
+      { id: 5, title: "Service Guarantee", description: "Implement iron-clad service level guarantees with penalties.", cost: 3, effects: { reliability: 12, profit: -6 } },
+      { id: 6, title: "Consistent Processes", description: "Document and standardize all customer-facing processes.", cost: 2, effects: { reliability: 8, profit: -2 } },
+      { id: 7, title: "Proactive Communication", description: "Always update stakeholders before they need to ask.", cost: 2, effects: { reliability: 10, intimacy: 3, profit: -4 } },
+      { id: 8, title: "Crisis Preparedness", description: "Develop and test comprehensive contingency plans.", cost: 3, effects: { reliability: 10, profit: -5 } },
+      
+      // Intimacy builders
+      { id: 9, title: "Deep Listening Program", description: "Structured programs to truly understand stakeholder needs.", cost: 2, effects: { intimacy: 12, profit: -3 } },
+      { id: 10, title: "Personalized Service", description: "Tailor interactions to individual stakeholder contexts.", cost: 3, effects: { intimacy: 10, profit: -5 } },
+      { id: 11, title: "Vulnerability & Honesty", description: "Admit mistakes openly and share challenges authentically.", cost: 1, effects: { intimacy: 8, credibility: 3, selfOrientation: -3, profit: -2 } },
+      { id: 12, title: "Confidentiality Excellence", description: "Go above and beyond in protecting stakeholder information.", cost: 2, effects: { intimacy: 10, profit: -4 } },
+      
+      // Self-orientation reducers (costly but powerful)
+      { id: 13, title: "Customer-First Policy", description: "Formally prioritize customer outcomes over short-term profit.", cost: 3, effects: { selfOrientation: -8, profit: -10 } },
+      { id: 14, title: "Fair Pricing Review", description: "Audit and adjust pricing to ensure genuine value.", cost: 2, effects: { selfOrientation: -5, profit: -8 } },
+      { id: 15, title: "Long-Term Partnerships", description: "Shift from transactional to relationship-based engagement.", cost: 2, effects: { selfOrientation: -4, intimacy: 5, profit: -5 } },
+      
+      // Tempting options - high profit but increase self-orientation
+      { id: 16, title: "Premium Upselling", description: "Aggressive cross-selling and upselling programs.", cost: 1, effects: { selfOrientation: 6, profit: 15 }, tempting: true },
+      { id: 17, title: "Cost Optimization", description: "Cut service costs to improve margins.", cost: 1, effects: { selfOrientation: 4, reliability: -3, profit: 12 }, tempting: true },
+      { id: 18, title: "Marketing Spin", description: "Emphasize positives, downplay limitations in messaging.", cost: 1, effects: { selfOrientation: 5, credibility: -2, profit: 8 }, tempting: true },
     ],
     challenges: [
-      { title: "Media Scrutiny", description: "Investigative journalists are examining industry practices.", effect: "All trust pillars decrease by 5%.", pillarEffects: { 1: -5, 2: -5, 3: -5, 4: -5 } },
-      { title: "Regulatory Review", description: "Regulators announce increased oversight of your sector.", effect: "Ethics & Integrity trust decreases by 10%.", pillarEffects: { 2: -10 } },
-      { title: "Service Disruption", description: "A major operational incident affects service delivery.", effect: "Product & Service trust decreases by 15%.", pillarEffects: { 1: -15 } },
-      { title: "Competitor Scandal", description: "A competitor's ethical failure casts shadow on the industry.", effect: "All trust pillars decrease by 8%.", pillarEffects: { 1: -8, 2: -8, 3: -8, 4: -8 } },
-      { title: "Industry Recognition", description: "Your organization receives positive industry recognition.", effect: "Stakeholder Engagement trust increases by 8%.", pillarEffects: { 4: 8 } },
-      { title: "Market Growth", description: "Market expansion brings new stakeholder opportunities.", effect: "Stakeholder base increases by 10%.", pillarEffects: {}, customerEffect: 10 },
-      { title: "Economic Pressure", description: "Economic conditions create budget constraints.", effect: "Performance decreases by 10%.", pillarEffects: {}, profitEffect: -10 },
-      { title: "Competitor Innovation", description: "A competitor launches a well-received trust initiative.", effect: "Stakeholder Engagement trust decreases by 5%.", pillarEffects: { 4: -5 } },
+      { title: "Expertise Questioned", description: "Media questions your qualifications and competence.", dimension: "credibility", effect: -12 },
+      { title: "Service Failure", description: "A major service outage affects many stakeholders.", dimension: "reliability", effect: -15 },
+      { title: "Data Breach", description: "Stakeholder data is compromised in a security incident.", dimension: "intimacy", effect: -18 },
+      { title: "Profit Scandal", description: "Leaked documents reveal profit was prioritized over stakeholders.", dimension: "selfOrientation", effect: 10 },
+      { title: "Competitor Collapse", description: "A competitor fails, stakeholders seek reliable alternatives.", dimension: "reliability", effect: 5, customerEffect: 10 },
+      { title: "Industry Recognition", description: "Your expertise is recognized with a prestigious award.", dimension: "credibility", effect: 8 },
+      { title: "Economic Pressure", description: "Market conditions pressure you to cut costs.", dimension: "selfOrientation", effect: 3, profitEffect: -15 },
+      { title: "Stakeholder Testimonial", description: "A prominent stakeholder publicly praises your relationship.", dimension: "intimacy", effect: 8, customerEffect: 5 },
     ],
     personas: [
-      { id: "loyal", name: "Alex", role: "Long-term Stakeholder", avatar: "A" },
-      { id: "skeptic", name: "Jordan", role: "Cautious Observer", avatar: "J" },
-      { id: "new", name: "Morgan", role: "New Stakeholder", avatar: "M" },
+      { id: "analytical", name: "Alex", role: "Analytical Stakeholder", avatar: "A", weights: { credibility: 0.5, reliability: 0.3, intimacy: 0.2 } },
+      { id: "relational", name: "Jordan", role: "Relationship-Focused", avatar: "J", weights: { credibility: 0.2, reliability: 0.3, intimacy: 0.5 } },
+      { id: "pragmatic", name: "Morgan", role: "Pragmatic Partner", avatar: "M", weights: { credibility: 0.3, reliability: 0.5, intimacy: 0.2 } },
     ],
     feedback: {
-      1: {
-        high: ["The quality of service has been exceptional. I feel confident in my choice.", "Everything works smoothly and reliably. This is how it should be.", "I can see the investment in quality - it shows in every interaction."],
-        medium: ["Service is decent, but there is room for improvement.", "Things work most of the time, which is acceptable.", "Quality is okay, but I have seen better elsewhere."],
-        low: ["I am constantly disappointed by the quality.", "Nothing seems to work as promised.", "I do not trust that I will get what I am paying for."],
+      credibility: {
+        high: ["Their expertise is genuinely world-class. I trust their judgment completely.", "Everything they claim checks out. No exaggeration, no spin.", "They really know their stuff - I learn something every interaction."],
+        medium: ["They seem competent enough, though I sometimes wonder about depth.", "Their credentials look fine, but I have not seen them truly tested.", "Knowledgeable, but not distinctively so."],
+        low: ["I am not convinced they really know what they are doing.", "Their claims do not match what I have observed.", "I question whether they have the expertise they project."],
       },
-      2: {
-        high: ["I appreciate the transparency - it builds real confidence.", "The ethical commitment here is genuine and visible.", "I trust this organization to do the right thing."],
-        medium: ["They seem ethical enough, but I would like more transparency.", "I have no major concerns, but also no strong confidence.", "Their ethics seem standard for the industry."],
-        low: ["I do not trust their motives at all.", "There is too much hidden - what are they not telling us?", "Their actions do not match their words."],
+      reliability: {
+        high: ["Like clockwork. I never have to wonder or follow up.", "They do what they say, every single time. It is remarkable.", "I can plan around their commitments with complete confidence."],
+        medium: ["Usually reliable, with occasional hiccups.", "They generally deliver, though sometimes need reminding.", "Reasonably dependable, nothing exceptional."],
+        low: ["I have learned to always have a backup plan.", "Promises seem to be more aspirational than actual.", "Following up has become a part-time job."],
       },
-      3: {
-        high: ["Their commitment to community and sustainability is inspiring.", "I feel good supporting an organization that gives back.", "They truly care about more than just profits."],
-        medium: ["They do some good things, but could do more.", "Social responsibility seems like an afterthought.", "Nice initiatives, but are they just for show?"],
-        low: ["They only care about themselves.", "All talk, no real action on social issues.", "I see no evidence they care about community impact."],
+      intimacy: {
+        high: ["They truly understand our situation. I can be completely candid.", "I feel genuinely cared for, not just processed.", "They remember details I have forgotten myself. It is personal."],
+        medium: ["Professional and pleasant, though somewhat transactional.", "They listen, though I am not sure how deeply.", "Cordial relationship, but I keep some things back."],
+        low: ["I feel like a number, not a person.", "Sharing anything sensitive feels risky.", "They go through the motions but there is no real connection."],
       },
-      4: {
-        high: ["They really listen and respond to feedback.", "I feel valued as a stakeholder.", "Great communication and relationship building."],
-        medium: ["Communication is adequate but not exceptional.", "They engage when necessary, but not proactively.", "I feel like just another number sometimes."],
-        low: ["They never listen to feedback.", "Impossible to get any meaningful engagement.", "I feel completely ignored and undervalued."],
+      selfOrientation: {
+        high: ["Everything feels designed to extract maximum value from me.", "I constantly wonder what is in it for them.", "The relationship feels one-sided - in their favor."],
+        medium: ["They balance their interests with mine reasonably.", "Commercial but not exploitative.", "I understand they need to profit, and it feels fair."],
+        low: ["They genuinely seem to put my interests first.", "I have seen them sacrifice short-term gain for my benefit.", "Rare to find an organization this genuinely client-focused."],
       },
     },
     insights: [
-      "Trust is built gradually but can be lost rapidly.",
-      "Balancing all four trust pillars is more effective than excelling in just one.",
-      "Short-term gains often come at the expense of long-term trust.",
-      "Transparency initiatives yield the greatest trust returns.",
-      "Consistent actions matter more than grand gestures.",
-      "Stakeholder perception shapes reality more than internal metrics.",
-      "Crisis response reveals true organizational character.",
-      "Trust compounds over time with consistent positive actions.",
+      "Trust = (Credibility + Reliability + Intimacy) / Self-Orientation",
+      "You can excel in all three numerators, but high self-orientation divides it all away.",
+      "Credibility is what you know. Reliability is doing what you say. Intimacy is how safe people feel.",
+      "Self-orientation is the silent killer - stakeholders sense it even when you hide it.",
+      "Short-term profit grabs often cost more in trust than they gain in revenue.",
+      "Recovering from self-orientation perception is harder than building the other three.",
+      "Different stakeholders weight the dimensions differently - know your audience.",
+      "Consistency in reliability beats occasional excellence.",
     ],
-    welcomeMessage: "Build trust with your stakeholders through strategic initiatives and ethical leadership.",
-    goalDescription: "Create the most trusted organization while maintaining sustainable performance.",
+    welcomeMessage: "Build genuine trust using the Trust Equation: (Credibility + Reliability + Intimacy) / Self-Orientation.",
+    goalDescription: "Maximize trust by building C, R, and I while keeping self-orientation low.",
   },
 
   finance: {
@@ -169,95 +165,84 @@ export const industryPresets: Record<string, IndustryPreset> = {
       profitLabel: "Returns",
       customersLabel: "Clients",
     },
-    pillars: [
-      {
-        id: 1,
-        name: "Financial Security",
-        description: "Protection of assets and secure transactions",
-        focusAreas: ["Asset Protection", "Transaction Security", "Fraud Prevention"],
-      },
-      {
-        id: 2,
-        name: "Regulatory Compliance",
-        description: "Adherence to financial regulations and ethical standards",
-        focusAreas: ["Compliance Framework", "Fair Lending", "Transparent Fees"],
-      },
-      {
-        id: 3,
-        name: "Financial Wellbeing",
-        description: "Supporting customer financial health and literacy",
-        focusAreas: ["Financial Education", "Responsible Lending", "Accessibility"],
-      },
-      {
-        id: 4,
-        name: "Client Relationships",
-        description: "Building lasting partnerships with clients",
-        focusAreas: ["Advisory Services", "Communication", "Community Banking"],
-      },
-    ],
     initiatives: [
-      { id: 1, title: "Enhanced Security", description: "Implement biometric authentication and real-time fraud monitoring.", cost: 4, pillar: 1, trust: 15, profit: -10 },
-      { id: 2, title: "Insurance Guarantee", description: "Exceed standard deposit insurance with additional protections.", cost: 3, pillar: 1, trust: 12, profit: -8 },
-      { id: 3, title: "Secure Platform Audit", description: "Third-party security certification with public results.", cost: 3, pillar: 1, trust: 10, profit: -6 },
-      { id: 4, title: "Fee Transparency", description: "Clear, upfront fee disclosure with no hidden charges.", cost: 1, pillar: 2, trust: 10, profit: -5 },
-      { id: 5, title: "Compliance Excellence", description: "Exceed regulatory requirements and publicize compliance record.", cost: 3, pillar: 2, trust: 12, profit: -7 },
-      { id: 6, title: "Ethical Lending Pledge", description: "Commit to responsible lending practices and rate caps.", cost: 2, pillar: 2, trust: 10, profit: -8 },
-      { id: 7, title: "Financial Literacy Program", description: "Free financial education for customers and community.", cost: 2, pillar: 3, trust: 12, profit: -4 },
-      { id: 8, title: "Hardship Support", description: "Proactive support program for customers facing financial difficulty.", cost: 3, pillar: 3, trust: 15, profit: -10 },
-      { id: 9, title: "Accessibility Initiative", description: "Ensure services are accessible to underbanked communities.", cost: 3, pillar: 3, trust: 10, profit: -6 },
-      { id: 10, title: "Personal Advisory", description: "Assign dedicated advisors to all client accounts.", cost: 3, pillar: 4, trust: 10, profit: -5 },
-      { id: 11, title: "Community Investment", description: "Invest in local community development projects.", cost: 2, pillar: 4, trust: 8, profit: -4 },
-      { id: 12, title: "Client Portal", description: "Create comprehensive self-service portal with insights.", cost: 2, pillar: 4, trust: 6, profit: 2 },
+      // Credibility
+      { id: 1, title: "Regulatory Excellence", description: "Exceed compliance requirements and publicize your record.", cost: 3, effects: { credibility: 12, profit: -6 } },
+      { id: 2, title: "Financial Education", description: "Offer free financial literacy resources to clients.", cost: 2, effects: { credibility: 8, selfOrientation: -3, profit: -4 } },
+      { id: 3, title: "Performance Transparency", description: "Publish detailed, honest performance data including losses.", cost: 2, effects: { credibility: 10, profit: -3 } },
+      { id: 4, title: "Expert Advisory Team", description: "Hire and showcase credentialed financial experts.", cost: 4, effects: { credibility: 15, profit: -10 } },
+      
+      // Reliability
+      { id: 5, title: "Instant Access Guarantee", description: "Guarantee immediate access to funds with no delays.", cost: 3, effects: { reliability: 12, profit: -8 } },
+      { id: 6, title: "Proactive Alerts", description: "Notify clients of issues before they discover them.", cost: 2, effects: { reliability: 10, intimacy: 3, profit: -4 } },
+      { id: 7, title: "System Redundancy", description: "Invest in bulletproof infrastructure with 99.99% uptime.", cost: 4, effects: { reliability: 15, profit: -12 } },
+      { id: 8, title: "Consistent Experience", description: "Same quality service across all channels and touchpoints.", cost: 2, effects: { reliability: 8, profit: -4 } },
+      
+      // Intimacy
+      { id: 9, title: "Dedicated Advisors", description: "Assign personal advisors who truly know each client.", cost: 3, effects: { intimacy: 12, profit: -6 } },
+      { id: 10, title: "Life Stage Support", description: "Proactively help clients through major life transitions.", cost: 2, effects: { intimacy: 10, selfOrientation: -2, profit: -5 } },
+      { id: 11, title: "Hardship Programs", description: "Genuine support for clients facing financial difficulty.", cost: 3, effects: { intimacy: 12, selfOrientation: -5, profit: -10 } },
+      { id: 12, title: "Privacy Excellence", description: "Industry-leading data protection and discretion.", cost: 2, effects: { intimacy: 8, profit: -4 } },
+      
+      // Self-orientation reducers
+      { id: 13, title: "Fee Simplification", description: "Eliminate hidden fees and simplify pricing radically.", cost: 2, effects: { selfOrientation: -8, profit: -12 } },
+      { id: 14, title: "Fiduciary Commitment", description: "Legally commit to putting client interests first.", cost: 3, effects: { selfOrientation: -10, credibility: 5, profit: -8 } },
+      { id: 15, title: "Unsuitable Product Refusal", description: "Actively refuse to sell products that do not fit client needs.", cost: 2, effects: { selfOrientation: -6, profit: -10 } },
+      
+      // Tempting
+      { id: 16, title: "Complex Products", description: "Sell high-margin complex products most clients do not understand.", cost: 1, effects: { selfOrientation: 8, profit: 20 }, tempting: true },
+      { id: 17, title: "Penalty Optimization", description: "Restructure fees to maximize penalty and late payment revenue.", cost: 1, effects: { selfOrientation: 6, reliability: -2, profit: 15 }, tempting: true },
+      { id: 18, title: "Aggressive Sales Targets", description: "Push advisors to meet volume targets over suitability.", cost: 1, effects: { selfOrientation: 7, intimacy: -3, profit: 18 }, tempting: true },
     ],
     challenges: [
-      { title: "Data Breach Report", description: "Industry reports highlight increasing cyber threats to financial data.", effect: "Financial Security trust decreases by 12%.", pillarEffects: { 1: -12 } },
-      { title: "Regulatory Investigation", description: "Regulators announce industry-wide review of lending practices.", effect: "Regulatory Compliance trust decreases by 10%.", pillarEffects: { 2: -10 } },
-      { title: "Banking Scandal", description: "A major competitor is fined for unethical practices.", effect: "All trust pillars decrease by 6%.", pillarEffects: { 1: -6, 2: -6, 3: -6, 4: -6 } },
-      { title: "Economic Recession", description: "Economic downturn increases default rates and anxiety.", effect: "Client Relationships trust decreases by 8%.", pillarEffects: { 4: -8 }, profitEffect: -15 },
-      { title: "Fintech Disruption", description: "New fintech competitor offers innovative transparent services.", effect: "Financial Security trust decreases by 5%.", pillarEffects: { 1: -5, 4: -5 } },
-      { title: "Positive Audit", description: "Independent audit highlights strong governance practices.", effect: "Regulatory Compliance trust increases by 8%.", pillarEffects: { 2: 8 } },
-      { title: "Market Rally", description: "Strong market performance improves client portfolios.", effect: "Client base increases by 8%.", pillarEffects: {}, customerEffect: 8 },
-      { title: "Interest Rate Change", description: "Central bank policy changes affect margins.", effect: "Returns decrease by 8%.", pillarEffects: {}, profitEffect: -8 },
+      { title: "Market Crash", description: "Market downturn tests your advice and client relationships.", dimension: "credibility", effect: -10, profitEffect: -20 },
+      { title: "System Outage", description: "Critical systems go down during high-activity period.", dimension: "reliability", effect: -15 },
+      { title: "Data Breach", description: "Client financial data is exposed in a security incident.", dimension: "intimacy", effect: -18 },
+      { title: "Fee Scandal", description: "Media exposes industry-wide hidden fee practices.", dimension: "selfOrientation", effect: 8 },
+      { title: "Competitor Collapse", description: "A competitor fails, clients seek stability.", dimension: "reliability", effect: 6, customerEffect: 12 },
+      { title: "Regulatory Praise", description: "Regulators publicly commend your compliance standards.", dimension: "credibility", effect: 10 },
+      { title: "Interest Rate Shock", description: "Sudden rate changes pressure margins.", dimension: "selfOrientation", effect: 4, profitEffect: -15 },
+      { title: "Client Success Story", description: "A client publicly credits you with their financial security.", dimension: "intimacy", effect: 10, customerEffect: 5 },
     ],
     personas: [
-      { id: "wealthy", name: "Patricia", role: "High-Net-Worth Client", avatar: "P" },
-      { id: "retail", name: "Marcus", role: "Retail Banking Customer", avatar: "M" },
-      { id: "business", name: "Diana", role: "Small Business Owner", avatar: "D" },
+      { id: "hnw", name: "Patricia", role: "High-Net-Worth Client", avatar: "P", weights: { credibility: 0.4, reliability: 0.3, intimacy: 0.3 } },
+      { id: "retail", name: "Marcus", role: "Retail Client", avatar: "M", weights: { credibility: 0.3, reliability: 0.4, intimacy: 0.3 } },
+      { id: "business", name: "Diana", role: "Business Owner", avatar: "D", weights: { credibility: 0.35, reliability: 0.45, intimacy: 0.2 } },
     ],
     feedback: {
-      1: {
-        high: ["My money feels secure here. The security measures are excellent.", "I trust that my investments are protected.", "The fraud prevention caught a suspicious transaction immediately."],
-        medium: ["Security seems adequate, but I worry sometimes.", "I hope my data is as safe as they claim.", "Standard security - nothing special but nothing concerning."],
-        low: ["I do not feel my money is safe here.", "Too many security incidents in the news.", "How do I know my data is really protected?"],
+      credibility: {
+        high: ["Their financial expertise is exceptional. I trust their market insights completely.", "Every recommendation has been well-researched and sound.", "They understand finance deeply, not just product features."],
+        medium: ["They seem to know the products, less sure about broader strategy.", "Competent but I cross-check their advice.", "Adequate expertise for my basic needs."],
+        low: ["Their advice has cost me money. I question their competence.", "They push products without understanding my situation.", "I know more than some of their advisors."],
       },
-      2: {
-        high: ["Completely transparent about fees - no surprises ever.", "They clearly follow all the rules and then some.", "I trust their lending practices are fair."],
-        medium: ["Fees are reasonable but could be clearer.", "They seem compliant, but how would I really know?", "Some terms in the fine print concern me."],
-        low: ["Hidden fees keep appearing.", "I suspect they bend the rules when convenient.", "Their practices seem questionable."],
+      reliability: {
+        high: ["My money is always accessible, systems always work.", "They have never missed a commitment in years.", "I sleep well knowing they are handling my finances."],
+        medium: ["Usually reliable, occasional delays on complex requests.", "Systems work most of the time.", "Adequate but not exceptional dependability."],
+        low: ["Transactions fail, promises are broken.", "I have learned to keep backup accounts elsewhere.", "Their systems seem held together with tape."],
       },
-      3: {
-        high: ["They genuinely helped me improve my financial situation.", "The education resources transformed my understanding of money.", "They work with me during tough times, not against me."],
-        medium: ["Some helpful resources, but limited.", "They offer support, but it feels transactional.", "Financial advice is okay but not personalized."],
-        low: ["They only care about extracting fees.", "No support when I needed it most.", "They profit from my financial struggles."],
+      intimacy: {
+        high: ["My advisor knows my family situation, my goals, my fears.", "They proactively reach out when life events happen.", "I would tell them things I would not tell other financial providers."],
+        medium: ["Professional relationship, appropriate boundaries.", "They know my account, not really me.", "Functional but not personal."],
+        low: ["I am an account number to them.", "Turnover means starting over every time.", "No sense that they care about my actual life."],
       },
-      4: {
-        high: ["My advisor truly understands my needs.", "I feel like a valued client, not just an account number.", "Excellent communication and proactive service."],
-        medium: ["Service is acceptable but impersonal.", "Communication could be more proactive.", "I feel like just another customer."],
-        low: ["Impossible to reach anyone helpful.", "They do not care about my individual needs.", "I am just a source of fees to them."],
+      selfOrientation: {
+        high: ["Every interaction feels like a sales pitch.", "Fees appear everywhere, always in their favor.", "They optimize for their revenue, not my outcomes."],
+        medium: ["Commercial relationship with fair terms.", "They need to profit, I accept that.", "Reasonable balance of interests."],
+        low: ["They have actually talked me out of products that would have made them money.", "Fees are transparent and fair.", "I genuinely believe they put my interests first."],
       },
     },
     insights: [
-      "Financial trust is built on security and transparency.",
-      "Regulatory compliance is the foundation, not the ceiling.",
-      "Customer financial wellbeing drives long-term loyalty.",
-      "Crisis support builds stronger relationships than good-time marketing.",
-      "Transparent fees reduce complaints more than low fees.",
-      "Personal relationships differentiate in a digital world.",
-      "Community investment creates grassroots trust.",
-      "Security breaches elsewhere increase your opportunity to differentiate.",
+      "In finance, self-orientation destroys trust faster than anywhere else.",
+      "Clients remember how you treated them during market downturns.",
+      "Transparency about losses builds more credibility than hiding them.",
+      "Reliability in finance means money access when needed, period.",
+      "Complex products often signal self-orientation over client interest.",
+      "The best clients come from referrals - trust compounds.",
+      "Regulatory compliance is baseline credibility, not differentiator.",
+      "Intimacy in finance means understanding life goals, not just risk tolerance.",
     ],
-    welcomeMessage: "Build a trusted financial institution through security, transparency, and client care.",
-    goalDescription: "Create the most trusted financial services brand while maintaining sustainable returns.",
+    welcomeMessage: "Build a trusted financial institution using the Trust Equation.",
+    goalDescription: "Maximize client trust while resisting the temptation of high-margin but trust-destroying products.",
   },
 
   healthcare: {
@@ -270,95 +255,84 @@ export const industryPresets: Record<string, IndustryPreset> = {
       profitLabel: "Outcomes",
       customersLabel: "Patients",
     },
-    pillars: [
-      {
-        id: 1,
-        name: "Clinical Excellence",
-        description: "Quality of care and patient outcomes",
-        focusAreas: ["Care Quality", "Patient Safety", "Clinical Innovation"],
-      },
-      {
-        id: 2,
-        name: "Ethical Practice",
-        description: "Medical ethics and patient rights",
-        focusAreas: ["Informed Consent", "Privacy Protection", "Equitable Care"],
-      },
-      {
-        id: 3,
-        name: "Patient Wellbeing",
-        description: "Holistic health and preventive care",
-        focusAreas: ["Preventive Care", "Mental Health", "Health Education"],
-      },
-      {
-        id: 4,
-        name: "Care Experience",
-        description: "Patient journey and communication",
-        focusAreas: ["Communication", "Access to Care", "Support Services"],
-      },
-    ],
     initiatives: [
-      { id: 1, title: "Quality Accreditation", description: "Achieve top-tier healthcare quality certification.", cost: 4, pillar: 1, trust: 15, profit: -10 },
-      { id: 2, title: "Safety Protocol Enhancement", description: "Implement advanced patient safety monitoring systems.", cost: 3, pillar: 1, trust: 12, profit: -8 },
-      { id: 3, title: "Outcomes Transparency", description: "Publish detailed clinical outcomes and success rates.", cost: 2, pillar: 1, trust: 10, profit: -3 },
-      { id: 4, title: "Consent Excellence", description: "Enhanced informed consent process with patient advocates.", cost: 2, pillar: 2, trust: 10, profit: -4 },
-      { id: 5, title: "Privacy Leadership", description: "Exceed HIPAA requirements with advanced data protection.", cost: 3, pillar: 2, trust: 12, profit: -6 },
-      { id: 6, title: "Equity Initiative", description: "Programs to ensure equitable care across all demographics.", cost: 3, pillar: 2, trust: 12, profit: -8 },
-      { id: 7, title: "Wellness Programs", description: "Comprehensive preventive care and wellness offerings.", cost: 3, pillar: 3, trust: 10, profit: -5 },
-      { id: 8, title: "Mental Health Integration", description: "Integrate mental health services into all care pathways.", cost: 4, pillar: 3, trust: 15, profit: -12 },
-      { id: 9, title: "Community Health", description: "Free community health education and screening programs.", cost: 2, pillar: 3, trust: 8, profit: -6 },
-      { id: 10, title: "Patient Portal", description: "Comprehensive digital portal for records, scheduling, and communication.", cost: 3, pillar: 4, trust: 8, profit: 2 },
-      { id: 11, title: "Care Navigation", description: "Dedicated care navigators to guide patients through treatment.", cost: 3, pillar: 4, trust: 12, profit: -7 },
-      { id: 12, title: "Family Support", description: "Programs supporting patient families during care journeys.", cost: 2, pillar: 4, trust: 8, profit: -4 },
+      // Credibility
+      { id: 1, title: "Clinical Excellence Program", description: "Invest in top-tier clinical training and certifications.", cost: 4, effects: { credibility: 15, profit: -10 } },
+      { id: 2, title: "Outcomes Transparency", description: "Publish detailed clinical outcomes including complications.", cost: 2, effects: { credibility: 12, profit: -3 } },
+      { id: 3, title: "Research Partnership", description: "Partner with academic institutions on clinical research.", cost: 3, effects: { credibility: 10, profit: -6 } },
+      { id: 4, title: "Evidence-Based Protocols", description: "Implement and publicize rigorous evidence-based care protocols.", cost: 2, effects: { credibility: 8, reliability: 3, profit: -4 } },
+      
+      // Reliability
+      { id: 5, title: "Care Coordination", description: "Seamless handoffs and follow-through across all care stages.", cost: 3, effects: { reliability: 12, profit: -6 } },
+      { id: 6, title: "Appointment Guarantee", description: "Guaranteed timely appointments with minimal wait times.", cost: 3, effects: { reliability: 10, profit: -8 } },
+      { id: 7, title: "24/7 Access", description: "Round-the-clock access to care and clinical advice.", cost: 4, effects: { reliability: 12, intimacy: 3, profit: -10 } },
+      { id: 8, title: "Medication Safety System", description: "Implement comprehensive medication error prevention.", cost: 3, effects: { reliability: 10, credibility: 3, profit: -5 } },
+      
+      // Intimacy
+      { id: 9, title: "Patient Advocates", description: "Dedicated advocates to guide patients through care journey.", cost: 3, effects: { intimacy: 12, profit: -6 } },
+      { id: 10, title: "Whole-Person Care", description: "Address emotional and social needs, not just clinical.", cost: 2, effects: { intimacy: 10, profit: -4 } },
+      { id: 11, title: "Family Inclusion", description: "Meaningfully involve families in care decisions and support.", cost: 2, effects: { intimacy: 10, profit: -3 } },
+      { id: 12, title: "Dignity Standards", description: "Rigorous training on maintaining patient dignity always.", cost: 2, effects: { intimacy: 8, profit: -3 } },
+      
+      // Self-orientation reducers
+      { id: 13, title: "Unnecessary Care Reduction", description: "Actively reduce tests and procedures that do not add value.", cost: 2, effects: { selfOrientation: -8, credibility: 3, profit: -15 } },
+      { id: 14, title: "Price Transparency", description: "Clear, upfront pricing before any treatment.", cost: 2, effects: { selfOrientation: -6, profit: -8 } },
+      { id: 15, title: "Community Benefit Focus", description: "Prioritize community health over facility profits.", cost: 3, effects: { selfOrientation: -8, intimacy: 3, profit: -12 } },
+      
+      // Tempting
+      { id: 16, title: "Facility Fees", description: "Add facility fees to maximize reimbursement per visit.", cost: 1, effects: { selfOrientation: 7, profit: 18 }, tempting: true },
+      { id: 17, title: "Defensive Medicine", description: "Order extra tests primarily to reduce liability.", cost: 1, effects: { selfOrientation: 5, credibility: -2, profit: 12 }, tempting: true },
+      { id: 18, title: "High-Margin Specialties", description: "Steer investment toward profitable specialties over community needs.", cost: 1, effects: { selfOrientation: 6, profit: 15 }, tempting: true },
     ],
     challenges: [
-      { title: "Medical Error Report", description: "Media reports on medical errors in the healthcare industry.", effect: "Clinical Excellence trust decreases by 12%.", pillarEffects: { 1: -12 } },
-      { title: "Data Breach", description: "Healthcare data breaches make national news.", effect: "Ethical Practice trust decreases by 15%.", pillarEffects: { 2: -15 } },
-      { title: "Staff Shortage", description: "Healthcare worker shortage affects service quality.", effect: "Care Experience trust decreases by 10%.", pillarEffects: { 4: -10 }, profitEffect: -8 },
-      { title: "Pandemic Response", description: "Public health crisis tests healthcare system capacity.", effect: "All trust pillars tested - results vary by preparation.", pillarEffects: { 1: -5, 3: -5, 4: -8 } },
-      { title: "Research Breakthrough", description: "Your institution contributes to a major medical advancement.", effect: "Clinical Excellence trust increases by 10%.", pillarEffects: { 1: 10 } },
-      { title: "Community Recognition", description: "Community health initiatives receive public recognition.", effect: "Patient Wellbeing trust increases by 8%.", pillarEffects: { 3: 8 } },
-      { title: "Insurance Changes", description: "Insurance policy changes affect patient costs and access.", effect: "Outcomes decrease by 10%.", pillarEffects: {}, profitEffect: -10 },
-      { title: "Competitor Expansion", description: "A competitor opens a new state-of-the-art facility nearby.", effect: "Care Experience trust decreases by 5%.", pillarEffects: { 4: -5 }, customerEffect: -5 },
+      { title: "Medical Error", description: "A serious medical error becomes public.", dimension: "credibility", effect: -15 },
+      { title: "Care Delays", description: "System bottlenecks cause dangerous care delays.", dimension: "reliability", effect: -12 },
+      { title: "Privacy Breach", description: "Patient medical records are exposed.", dimension: "intimacy", effect: -18 },
+      { title: "Billing Scandal", description: "Media exposes aggressive billing practices.", dimension: "selfOrientation", effect: 12 },
+      { title: "Pandemic Response", description: "Public health crisis tests your entire system.", dimension: "reliability", effect: -8, profitEffect: -20 },
+      { title: "Clinical Breakthrough", description: "Your team achieves a notable clinical success.", dimension: "credibility", effect: 12, customerEffect: 8 },
+      { title: "Staff Shortages", description: "Healthcare worker shortage strains capacity.", dimension: "reliability", effect: -8, profitEffect: -10 },
+      { title: "Patient Testimonial", description: "A patient shares a powerful story of compassionate care.", dimension: "intimacy", effect: 10, customerEffect: 5 },
     ],
     personas: [
-      { id: "chronic", name: "Robert", role: "Chronic Care Patient", avatar: "R" },
-      { id: "parent", name: "Lisa", role: "Parent of Young Children", avatar: "L" },
-      { id: "elderly", name: "Eleanor", role: "Senior Patient", avatar: "E" },
+      { id: "chronic", name: "Robert", role: "Chronic Care Patient", avatar: "R", weights: { credibility: 0.35, reliability: 0.35, intimacy: 0.3 } },
+      { id: "parent", name: "Lisa", role: "Parent of Young Children", avatar: "L", weights: { credibility: 0.4, reliability: 0.3, intimacy: 0.3 } },
+      { id: "elderly", name: "Eleanor", role: "Elderly Patient", avatar: "E", weights: { credibility: 0.3, reliability: 0.3, intimacy: 0.4 } },
     ],
     feedback: {
-      1: {
-        high: ["The quality of care here is outstanding. I trust my doctors completely.", "I know I am getting the best possible treatment.", "Their clinical outcomes speak for themselves."],
-        medium: ["Care quality seems good, but I have questions sometimes.", "Doctors are competent but rushed.", "Treatment is effective, though not exceptional."],
-        low: ["I worry about the quality of care I receive.", "Too many mistakes and near-misses.", "I do not feel confident in my treatment."],
+      credibility: {
+        high: ["The clinical expertise here is outstanding. I trust my care completely.", "They stay current with the latest research and treatments.", "I have complete confidence in their medical judgment."],
+        medium: ["Doctors seem competent, though I sometimes seek second opinions.", "Adequate clinical care, nothing exceptional.", "They follow standard protocols well enough."],
+        low: ["I have experienced errors that shook my confidence.", "Their knowledge seems outdated.", "I research everything before accepting their recommendations."],
       },
-      2: {
-        high: ["They explain everything and respect my decisions.", "My privacy is clearly protected here.", "I receive the same great care regardless of my background."],
-        medium: ["Consent process is adequate but quick.", "I assume my records are private.", "Care seems fair, though I cannot be sure."],
-        low: ["I feel pressured into decisions.", "Who knows where my medical data ends up?", "I have seen unequal treatment here."],
+      reliability: {
+        high: ["Appointments run on time, follow-ups happen, nothing falls through cracks.", "The care coordination is seamless.", "I never worry about something being missed."],
+        medium: ["Usually reliable, some waits and occasional mix-ups.", "Have to follow up sometimes to ensure things happen.", "Functional but with friction."],
+        low: ["Appointments are delayed, tests get lost, chaos is normal.", "I have to manage my own care coordination.", "The system feels broken."],
       },
-      3: {
-        high: ["They care about my whole health, not just my illness.", "The wellness programs have transformed my life.", "Mental health support is genuinely available."],
-        medium: ["Some preventive care options, but limited.", "Wellness is mentioned but not prioritized.", "Mental health feels like an afterthought."],
-        low: ["They only care about treating illness, not preventing it.", "No real support for overall wellbeing.", "Mental health needs are completely ignored."],
+      intimacy: {
+        high: ["They see me as a person, not a diagnosis.", "The care and compassion are genuine.", "I feel truly heard and understood."],
+        medium: ["Professional and polite, somewhat impersonal.", "Efficient but not warm.", "Clinical competence without emotional connection."],
+        low: ["I feel processed, not cared for.", "No one seems to know my story.", "The human element is completely missing."],
       },
-      4: {
-        high: ["Everyone is caring and communication is excellent.", "I can easily access care when I need it.", "They make a difficult journey more bearable."],
-        medium: ["Staff are okay, but communication could be better.", "Appointment availability is hit or miss.", "The experience is functional but not warm."],
-        low: ["I feel like a number, not a person.", "Impossible to get appointments when needed.", "No one communicates what is happening with my care."],
+      selfOrientation: {
+        high: ["Every visit generates more bills than seems necessary.", "They push treatments I am not sure I need.", "Profit clearly drives decisions more than my health."],
+        medium: ["Reasonable balance of business and care.", "I understand they have financial pressures.", "Not exploitative but not selfless either."],
+        low: ["They have actually recommended less expensive alternatives.", "Patient outcomes clearly come first.", "I never feel like a revenue source."],
       },
     },
     insights: [
-      "Clinical excellence is the foundation of healthcare trust.",
-      "Privacy breaches devastate trust faster than any other factor.",
-      "Holistic wellbeing approaches build deeper patient loyalty.",
-      "Communication quality often matters more than clinical outcomes.",
-      "Equitable care builds community trust beyond individual patients.",
-      "Family experience shapes patient perception significantly.",
-      "Preventive care investments pay long-term trust dividends.",
-      "Transparency about outcomes builds credibility even when imperfect.",
+      "In healthcare, credibility failures can be literally life-threatening.",
+      "Patients remember how they were treated when vulnerable.",
+      "Unnecessary procedures are the biggest self-orientation signal.",
+      "Reliability in healthcare means no dropped handoffs, ever.",
+      "Intimacy matters more in healthcare than almost any other sector.",
+      "Transparency about errors, handled well, can actually build trust.",
+      "Family experience shapes patient trust as much as direct care.",
+      "Price transparency signals low self-orientation powerfully.",
     ],
-    welcomeMessage: "Build trust in your healthcare organization through clinical excellence and compassionate care.",
-    goalDescription: "Create the most trusted healthcare provider while maintaining sustainable outcomes.",
+    welcomeMessage: "Build a trusted healthcare organization using the Trust Equation.",
+    goalDescription: "Maximize patient trust while navigating the tension between outcomes and financial sustainability.",
   },
 
   technology: {
@@ -371,95 +345,84 @@ export const industryPresets: Record<string, IndustryPreset> = {
       profitLabel: "Growth",
       customersLabel: "Users",
     },
-    pillars: [
-      {
-        id: 1,
-        name: "Product Reliability",
-        description: "Performance, uptime, and technical excellence",
-        focusAreas: ["System Uptime", "Performance", "Security"],
-      },
-      {
-        id: 2,
-        name: "Data Ethics",
-        description: "Privacy, transparency, and responsible AI",
-        focusAreas: ["Privacy Protection", "Data Transparency", "AI Ethics"],
-      },
-      {
-        id: 3,
-        name: "Digital Wellbeing",
-        description: "Healthy technology use and accessibility",
-        focusAreas: ["Screen Time Tools", "Accessibility", "Mental Health"],
-      },
-      {
-        id: 4,
-        name: "User Community",
-        description: "Engagement, support, and ecosystem",
-        focusAreas: ["User Support", "Developer Relations", "Community Building"],
-      },
-    ],
     initiatives: [
-      { id: 1, title: "99.99% Uptime", description: "Invest in infrastructure for industry-leading reliability.", cost: 4, pillar: 1, trust: 15, profit: -12 },
-      { id: 2, title: "Security Certification", description: "Achieve SOC 2 Type II and publicize audit results.", cost: 3, pillar: 1, trust: 12, profit: -8 },
-      { id: 3, title: "Performance Dashboard", description: "Real-time public status page with historical data.", cost: 2, pillar: 1, trust: 8, profit: -3 },
-      { id: 4, title: "Privacy by Design", description: "Implement and certify privacy-first architecture.", cost: 3, pillar: 2, trust: 12, profit: -6 },
-      { id: 5, title: "Data Portability", description: "Easy data export and account deletion tools.", cost: 2, pillar: 2, trust: 10, profit: -4 },
-      { id: 6, title: "AI Transparency", description: "Publish AI decision-making processes and allow opt-outs.", cost: 3, pillar: 2, trust: 12, profit: -8 },
-      { id: 7, title: "Digital Wellness Tools", description: "Built-in features to promote healthy usage patterns.", cost: 2, pillar: 3, trust: 10, profit: -5 },
-      { id: 8, title: "Accessibility Excellence", description: "WCAG AAA compliance and accessibility-first design.", cost: 3, pillar: 3, trust: 10, profit: -6 },
-      { id: 9, title: "Youth Protection", description: "Enhanced protections and controls for younger users.", cost: 3, pillar: 3, trust: 12, profit: -8 },
-      { id: 10, title: "24/7 Support", description: "Human support available around the clock.", cost: 3, pillar: 4, trust: 10, profit: -8 },
-      { id: 11, title: "Developer Program", description: "Comprehensive API access and developer community.", cost: 2, pillar: 4, trust: 6, profit: 5 },
-      { id: 12, title: "User Council", description: "Formal user advisory board influencing product decisions.", cost: 2, pillar: 4, trust: 10, profit: -2 },
+      // Credibility
+      { id: 1, title: "Security Certifications", description: "Achieve SOC2, ISO 27001, and publicize audit results.", cost: 4, effects: { credibility: 15, profit: -10 } },
+      { id: 2, title: "Open Source Core", description: "Open source key components for community verification.", cost: 3, effects: { credibility: 12, selfOrientation: -3, profit: -6 } },
+      { id: 3, title: "Technical Transparency", description: "Publish detailed technical architecture and decision rationale.", cost: 2, effects: { credibility: 10, profit: -3 } },
+      { id: 4, title: "Bug Bounty Program", description: "Invite security researchers to find and report vulnerabilities.", cost: 2, effects: { credibility: 8, profit: -4 } },
+      
+      // Reliability
+      { id: 5, title: "99.99% SLA", description: "Commit to and deliver exceptional uptime guarantees.", cost: 4, effects: { reliability: 15, profit: -12 } },
+      { id: 6, title: "Public Status Page", description: "Real-time, honest system status with incident history.", cost: 2, effects: { reliability: 10, credibility: 3, profit: -2 } },
+      { id: 7, title: "Graceful Degradation", description: "Systems that fail gracefully, never catastrophically.", cost: 3, effects: { reliability: 10, profit: -6 } },
+      { id: 8, title: "Instant Rollback", description: "Ability to instantly revert any problematic update.", cost: 2, effects: { reliability: 8, profit: -4 } },
+      
+      // Intimacy
+      { id: 9, title: "Human Support", description: "Real humans available, not just chatbots and articles.", cost: 3, effects: { intimacy: 12, profit: -8 } },
+      { id: 10, title: "User Research Integration", description: "Deeply involve users in product development.", cost: 2, effects: { intimacy: 10, selfOrientation: -2, profit: -4 } },
+      { id: 11, title: "Data Portability", description: "Make it easy for users to export all their data anytime.", cost: 2, effects: { intimacy: 8, selfOrientation: -4, profit: -5 } },
+      { id: 12, title: "Privacy-First Design", description: "Minimize data collection, maximize user control.", cost: 3, effects: { intimacy: 12, selfOrientation: -3, profit: -8 } },
+      
+      // Self-orientation reducers
+      { id: 13, title: "No Dark Patterns", description: "Eliminate all manipulative UX designed to trick users.", cost: 2, effects: { selfOrientation: -10, profit: -10 } },
+      { id: 14, title: "Transparent Pricing", description: "Simple, honest pricing with no surprise charges.", cost: 1, effects: { selfOrientation: -5, profit: -6 } },
+      { id: 15, title: "User-Aligned Metrics", description: "Optimize for user success, not engagement time.", cost: 2, effects: { selfOrientation: -6, intimacy: 3, profit: -8 } },
+      
+      // Tempting
+      { id: 16, title: "Engagement Optimization", description: "Use psychology to maximize addictive usage patterns.", cost: 1, effects: { selfOrientation: 8, profit: 20 }, tempting: true },
+      { id: 17, title: "Data Monetization", description: "Sell user data and behavioral insights to third parties.", cost: 1, effects: { selfOrientation: 10, intimacy: -5, profit: 25 }, tempting: true },
+      { id: 18, title: "Switching Costs", description: "Design lock-in that makes leaving difficult.", cost: 1, effects: { selfOrientation: 7, reliability: -2, profit: 15 }, tempting: true },
     ],
     challenges: [
-      { title: "Major Outage", description: "A widespread service outage affects millions of users.", effect: "Product Reliability trust decreases by 18%.", pillarEffects: { 1: -18 } },
-      { title: "Privacy Scandal", description: "Tech industry privacy practices face public scrutiny.", effect: "Data Ethics trust decreases by 15%.", pillarEffects: { 2: -15 } },
-      { title: "Algorithm Controversy", description: "AI decision-making faces ethical criticism.", effect: "Data Ethics trust decreases by 10%.", pillarEffects: { 2: -10, 3: -5 } },
-      { title: "Competitor Launch", description: "A competitor launches a privacy-focused alternative.", effect: "User Community trust decreases by 8%.", pillarEffects: { 4: -8 }, customerEffect: -5 },
-      { title: "Security Breach", description: "Industry-wide security vulnerabilities are exposed.", effect: "Product Reliability trust decreases by 12%.", pillarEffects: { 1: -12, 2: -8 } },
-      { title: "Viral Success", description: "Your product goes viral with positive user stories.", effect: "User Community trust increases by 10%.", pillarEffects: { 4: 10 }, customerEffect: 15 },
-      { title: "Regulatory Pressure", description: "New tech regulations are proposed.", effect: "Data Ethics trust decreases by 5%.", pillarEffects: { 2: -5 } },
-      { title: "Economic Downturn", description: "Tech sector valuations decline significantly.", effect: "Growth decreases by 15%.", pillarEffects: {}, profitEffect: -15 },
+      { title: "Security Breach", description: "A significant security vulnerability is exploited.", dimension: "credibility", effect: -15 },
+      { title: "Major Outage", description: "Extended downtime affects millions of users.", dimension: "reliability", effect: -18 },
+      { title: "Privacy Scandal", description: "Improper data handling practices are exposed.", dimension: "intimacy", effect: -15 },
+      { title: "Enshittification", description: "Users notice the product getting worse as you extract more value.", dimension: "selfOrientation", effect: 12 },
+      { title: "Competitor Breach", description: "A competitor suffers a major breach, users seek alternatives.", dimension: "credibility", effect: 5, customerEffect: 10 },
+      { title: "Viral Success", description: "Genuine user enthusiasm creates organic growth.", dimension: "intimacy", effect: 8, customerEffect: 15 },
+      { title: "VC Pressure", description: "Investors pressure for faster monetization.", dimension: "selfOrientation", effect: 5, profitEffect: -10 },
+      { title: "Open Source Win", description: "Your open source contribution is widely adopted.", dimension: "credibility", effect: 10, customerEffect: 5 },
     ],
     personas: [
-      { id: "power", name: "Dev", role: "Power User", avatar: "D" },
-      { id: "privacy", name: "Sam", role: "Privacy-Conscious User", avatar: "S" },
-      { id: "casual", name: "Chris", role: "Casual User", avatar: "C" },
+      { id: "developer", name: "Dev", role: "Developer User", avatar: "D", weights: { credibility: 0.45, reliability: 0.35, intimacy: 0.2 } },
+      { id: "privacy", name: "Sam", role: "Privacy-Conscious User", avatar: "S", weights: { credibility: 0.3, reliability: 0.25, intimacy: 0.45 } },
+      { id: "business", name: "Chris", role: "Business User", avatar: "C", weights: { credibility: 0.3, reliability: 0.5, intimacy: 0.2 } },
     ],
     feedback: {
-      1: {
-        high: ["Rock solid reliability - I depend on this every day.", "Performance is incredible, never had an issue.", "I trust my data is secure here."],
-        medium: ["Usually works fine, occasional hiccups.", "Performance is acceptable for what I pay.", "Security seems okay, I hope."],
-        low: ["Constant crashes and downtime.", "Too slow to be useful.", "I do not trust this with my data."],
+      credibility: {
+        high: ["Their security practices are genuinely best-in-class.", "The technical team clearly knows what they are doing.", "I trust their architecture and engineering decisions."],
+        medium: ["Seems secure enough, though I have not verified deeply.", "Standard tech company competence.", "They follow basic best practices."],
+        low: ["Their security claims do not match their actions.", "I have seen too many bugs to trust the underlying quality.", "Would not trust them with sensitive data."],
       },
-      2: {
-        high: ["They actually respect my privacy - rare these days.", "Complete transparency about how my data is used.", "AI features are helpful without being creepy."],
-        medium: ["Privacy policy is standard, nothing special.", "I am not sure what they do with my data.", "The AI recommendations are hit or miss."],
-        low: ["They clearly sell my data everywhere.", "No idea what happens to my information.", "The AI feels invasive and manipulative."],
+      reliability: {
+        high: ["Rock solid. I have never experienced unexpected downtime.", "Their status page is honest and updates are smooth.", "I build critical workflows on this without worry."],
+        medium: ["Mostly reliable, occasional hiccups.", "Uptime is acceptable for the price.", "Have had a few frustrating outages."],
+        low: ["Downtime is regular and unpredictable.", "I have lost work due to their instability.", "Cannot rely on this for anything important."],
       },
-      3: {
-        high: ["Love the tools that help me use this healthily.", "Truly accessible - works great with my needs.", "They care about impact on wellbeing."],
-        medium: ["Some wellness features, but limited.", "Accessibility is okay but not great.", "They do not seem to care about overuse."],
-        low: ["This app is designed to be addictive.", "Completely inaccessible for my needs.", "They profit from unhealthy usage."],
+      intimacy: {
+        high: ["They clearly respect my privacy and data.", "Support is human and actually helpful.", "I feel like my feedback genuinely matters."],
+        medium: ["Standard data practices, nothing concerning.", "Support exists but is impersonal.", "They listen sometimes."],
+        low: ["I feel like the product, not the customer.", "My data is clearly being exploited.", "Impossible to talk to a human."],
       },
-      4: {
-        high: ["Best support I have ever experienced.", "Love being part of this community.", "They actually listen to user feedback."],
-        medium: ["Support is adequate when I can reach them.", "Community exists but is not very active.", "They sometimes implement user suggestions."],
-        low: ["Support is nonexistent.", "No sense of community at all.", "They never listen to users."],
+      selfOrientation: {
+        high: ["Every update makes the product worse for me and better for their metrics.", "Dark patterns everywhere.", "They clearly optimize for their growth, not my success."],
+        medium: ["Normal commercial product dynamics.", "They need to make money, I get it.", "Fair value exchange."],
+        low: ["They actively help me use less when that is best for me.", "No manipulative patterns.", "Genuinely aligned with my interests."],
       },
     },
     insights: [
-      "Uptime and reliability are foundational trust requirements.",
-      "Privacy scandals spread faster than any other trust issue.",
-      "Digital wellbeing features build long-term user loyalty.",
-      "Community investment creates advocates who defend you.",
-      "Transparency about AI builds trust in an age of suspicion.",
-      "Security breaches affect entire industries - prepare accordingly.",
-      "Developer ecosystems create sticky, trusting relationships.",
-      "User feedback loops demonstrate respect and build trust.",
+      "In tech, enshittification is the visible face of rising self-orientation.",
+      "Uptime and reliability are table stakes - failures are remembered forever.",
+      "Privacy is intimacy in the digital world.",
+      "Dark patterns are self-orientation made visible.",
+      "Developer trust is earned through transparency and documentation.",
+      "Data portability signals low self-orientation powerfully.",
+      "Security credibility takes years to build and moments to destroy.",
+      "Engagement metrics can mask growing self-orientation.",
     ],
-    welcomeMessage: "Build trust in your technology platform through reliability, privacy, and user focus.",
-    goalDescription: "Create the most trusted tech platform while maintaining sustainable growth.",
+    welcomeMessage: "Build a trusted technology platform using the Trust Equation.",
+    goalDescription: "Maximize user trust while resisting the temptation to exploit attention and data.",
   },
 };
 

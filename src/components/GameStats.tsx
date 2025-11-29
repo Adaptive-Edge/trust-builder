@@ -1,10 +1,9 @@
-import { Coins, TrendingUp, Users, Target, RotateCcw } from "lucide-react";
+import { Coins, TrendingUp, Users, RotateCcw } from "lucide-react";
 
 interface GameStatsProps {
   resources: number;
   profit: number;
   customers: number;
-  trust: number;
   round: number;
   maxRounds: number;
   actionsLeft: number;
@@ -19,7 +18,6 @@ export const GameStats = ({
   resources,
   profit,
   customers,
-  trust,
   round,
   maxRounds,
   actionsLeft,
@@ -27,7 +25,7 @@ export const GameStats = ({
 }: GameStatsProps) => {
   return (
     <div className="glass rounded-xl p-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="flex items-center gap-2">
           <Coins className="w-5 h-5 text-[var(--ae-accent-gold)]" />
           <div>
@@ -53,14 +51,6 @@ export const GameStats = ({
         </div>
 
         <div className="flex items-center gap-2">
-          <Target className="w-5 h-5 text-[var(--ae-accent-magenta)]" />
-          <div>
-            <p className="text-xs text-[var(--muted-foreground)]">Overall Trust</p>
-            <p className="text-lg font-bold text-[var(--foreground)]">{trust}%</p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
           <RotateCcw className="w-5 h-5 text-[var(--muted-foreground)]" />
           <div>
             <p className="text-xs text-[var(--muted-foreground)]">Round</p>
@@ -73,8 +63,8 @@ export const GameStats = ({
             {actionsLeft}
           </div>
           <div>
-            <p className="text-xs text-[var(--muted-foreground)]">Actions Left</p>
-            <p className="text-lg font-bold text-[var(--foreground)]">{actionsLeft}</p>
+            <p className="text-xs text-[var(--muted-foreground)]">Actions</p>
+            <p className="text-lg font-bold text-[var(--foreground)]">{actionsLeft} left</p>
           </div>
         </div>
       </div>

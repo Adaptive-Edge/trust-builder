@@ -1,5 +1,6 @@
-import { Trophy, TrendingUp, Users, Target, RotateCcw, Home } from "lucide-react";
+import { Trophy, TrendingUp, Users, RotateCcw, Home } from "lucide-react";
 import type { GameState } from "../hooks/useGameState";
+import { calculateTrust } from "../hooks/useGameState";
 import type { IndustryPreset } from "../data/industryPresets";
 
 interface GameOverProps {
@@ -10,21 +11,18 @@ interface GameOverProps {
 }
 
 export const GameOver = ({ state, preset, onRestart, onChangeIndustry }: GameOverProps) => {
-  const getTrustRating = (trust: number) => {
-    if (trust >= 80) return { label: "Exceptional", color: "var(--trust-high)", description: "You have built an exemplary trusted organization." };
-    if (trust >= 65) return { label: "Strong", color: "var(--trust-high)", description: "Your organization has earned significant stakeholder trust." };
-    if (trust >= 50) return { label: "Moderate", color: "var(--trust-medium)", description: "You have maintained acceptable trust levels." };
-    if (trust >= 35) return { label: "Weak", color: "var(--trust-low)", description: "Trust has eroded and needs attention." };
-    return { label: "Critical", color: "var(--trust-low)", description: "Stakeholder trust is severely damaged." };
+  const trust = calculateTrust(state.dimensions);
+  const numerator = state.dimensions.credibility + state.dimensions.reliability + state.dimensions.intimacy;
+  
+  const getTrustRating = (t: number) => {
+    if (t >= 70) return { label: "Exceptional", color: "var(--trust-high)", description: "You built a genuinely trusted organization." };
+    if (t >= 50) return { label: "Strong", color: "var(--trust-high)", description: "Solid trust foundation with room to grow." };
+    if (t >= 35) return { label: "Moderate", color: "var(--trust-medium)", description: "Trust exists but is fragile." };
+    if (t >= 20) return { label: "Weak", color: "var(--trust-low)", description: "Self-orientation has undermined trust." };
+    return { label: "Critical", color: "var(--trust-low)", description: "Trust is severely damaged. Self-interest dominated." };
   };
 
-  const rating = getTrustRating(state.trust);
-
-  // Calculate pillar balance score
-  const pillarValues = Object.values(state.pillars);
-  const pillarAvg = pillarValues.reduce((a, b) => a + b, 0) / pillarValues.length;
-  const pillarVariance = pillarValues.reduce((sum, val) => sum + Math.pow(val - pillarAvg, 2), 0) / pillarValues.length;
-  const balanceScore = Math.max(0, 100 - Math.sqrt(pillarVariance) * 2);
+  const rating = getTrustRating(trust);
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
@@ -34,66 +32,70 @@ export const GameOver = ({ state, preset, onRestart, onChangeIndustry }: GameOve
           <h1 className="text-3xl font-bold text-[var(--foreground)] mb-2">
             Simulation Complete
           </h1>
-          <p className="text-xl mb-6" style={{ color: rating.color }}>
+          <p className="text-xl mb-2" style={{ color: rating.color }}>
             Trust Rating: {rating.label}
           </p>
-          <p className="text-[var(--muted-foreground)] mb-8">{rating.description}</p>
+          <p className="text-[var(--muted-foreground)] mb-6">{rating.description}</p>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div className="glass rounded-xl p-4">
-              <Target className="w-6 h-6 mx-auto mb-2 text-[var(--ae-accent-magenta)]" />
-              <p className="text-2xl font-bold text-[var(--foreground)]">{state.trust}%</p>
-              <p className="text-xs text-[var(--muted-foreground)]">Final Trust</p>
+          {/* The Equation Result */}
+          <div className="glass rounded-xl p-6 mb-6">
+            <h3 className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-3">
+              Final Trust Equation
+            </h3>
+            <div className="flex items-center justify-center gap-4 text-2xl font-mono mb-4">
+              <div className="text-center">
+                <div className="text-[var(--ae-accent-cyan)] font-bold">{Math.round(numerator)}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">(C + R + I)</div>
+              </div>
+              <div className="text-3xl text-[var(--muted-foreground)]">/</div>
+              <div className="text-center">
+                <div className="text-[var(--trust-low)] font-bold">{Math.round(state.dimensions.selfOrientation)}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">(Self)</div>
+              </div>
+              <div className="text-3xl text-[var(--muted-foreground)]">=</div>
+              <div className="text-center">
+                <div className="font-bold text-3xl" style={{ color: rating.color }}>{trust}%</div>
+                <div className="text-xs text-[var(--muted-foreground)]">Trust</div>
+              </div>
             </div>
+            
+            <div className="grid grid-cols-4 gap-2 text-sm">
+              <div className="p-2 rounded bg-[var(--ae-purple-800)]">
+                <div className="text-[var(--ae-accent-cyan)] font-bold">{Math.round(state.dimensions.credibility)}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">Credibility</div>
+              </div>
+              <div className="p-2 rounded bg-[var(--ae-purple-800)]">
+                <div className="text-[var(--ae-accent-cyan)] font-bold">{Math.round(state.dimensions.reliability)}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">Reliability</div>
+              </div>
+              <div className="p-2 rounded bg-[var(--ae-purple-800)]">
+                <div className="text-[var(--ae-accent-cyan)] font-bold">{Math.round(state.dimensions.intimacy)}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">Intimacy</div>
+              </div>
+              <div className="p-2 rounded bg-[var(--ae-purple-800)]">
+                <div className="text-[var(--trust-low)] font-bold">{Math.round(state.dimensions.selfOrientation)}</div>
+                <div className="text-xs text-[var(--muted-foreground)]">Self-Orient.</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4 mb-6">
             <div className="glass rounded-xl p-4">
               <Users className="w-6 h-6 mx-auto mb-2 text-[var(--ae-accent-cyan)]" />
               <p className="text-2xl font-bold text-[var(--foreground)]">{state.customers.toLocaleString()}</p>
               <p className="text-xs text-[var(--muted-foreground)]">{preset.metrics.customersLabel}</p>
             </div>
             <div className="glass rounded-xl p-4">
-              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-[var(--trust-high)]" />
+              <TrendingUp className="w-6 h-6 mx-auto mb-2 text-[var(--ae-accent-gold)]" />
               <p className="text-2xl font-bold text-[var(--foreground)]">{state.profit}</p>
               <p className="text-xs text-[var(--muted-foreground)]">{preset.metrics.profitLabel}</p>
             </div>
-            <div className="glass rounded-xl p-4">
-              <div className="w-6 h-6 mx-auto mb-2 rounded-full bg-[var(--ae-accent-gold)] flex items-center justify-center text-xs font-bold text-[var(--ae-purple-950)]">B</div>
-              <p className="text-2xl font-bold text-[var(--foreground)]">{Math.round(balanceScore)}%</p>
-              <p className="text-xs text-[var(--muted-foreground)]">Balance Score</p>
-            </div>
           </div>
 
-          <div className="mb-8">
-            <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Pillar Breakdown</h3>
-            <div className="space-y-3">
-              {preset.pillars.map((pillar) => (
-                <div key={pillar.id} className="flex items-center gap-3">
-                  <span className="text-sm text-[var(--muted-foreground)] w-40 text-left truncate">
-                    {pillar.name}
-                  </span>
-                  <div className="flex-1 trust-meter">
-                    <div
-                      className="trust-fill"
-                      style={{
-                        width: `${state.pillars[pillar.id]}%`,
-                        background:
-                          state.pillars[pillar.id] >= 70
-                            ? "var(--trust-high)"
-                            : state.pillars[pillar.id] >= 40
-                            ? "var(--trust-medium)"
-                            : "var(--trust-low)",
-                      }}
-                    />
-                  </div>
-                  <span className="text-sm font-medium text-[var(--foreground)] w-12">
-                    {state.pillars[pillar.id]}%
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="mb-8 text-left">
-            <h3 className="text-lg font-semibold text-[var(--foreground)] mb-3">Key Insight</h3>
+          {/* Insight */}
+          <div className="mb-6 text-left">
+            <h3 className="text-sm font-medium text-[var(--muted-foreground)] uppercase tracking-wider mb-2">Key Insight</h3>
             <p className="text-[var(--muted-foreground)] italic">
               "{preset.insights[Math.floor(Math.random() * preset.insights.length)]}"
             </p>
